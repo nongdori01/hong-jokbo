@@ -66,8 +66,17 @@
     margin-top:18px;padding:12px 16px;background:var(--sheet);
     border:1px solid var(--sheet-border);border-left:3px solid var(--seal);
     font-size:14px;color:var(--ink);
+    display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
   }
   .hero .deadline b{color:var(--seal-deep);}
+  .hero .deadline .contact{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .hero .call-btn{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--seal);color:#fff;text-decoration:none;
+    padding:7px 12px;border-radius:20px;font-size:13px;font-weight:700;
+    white-space:nowrap;
+  }
+  .hero .call-btn:active{background:var(--seal-deep);}
   .hero .edit-banner{
     margin-top:14px;padding:12px 16px;background:#EAF0E9;border:1px solid #B9CDB8;
     border-left:3px solid var(--ok);font-size:13.5px;color:var(--ink);
@@ -239,11 +248,17 @@
   <h1>우리 집안의 이야기를<br>다음 세대까지 정확하게.</h1>
   <p>기존 종이 수단양식을 그대로 온라인으로 옮겼습니다. 아는 만큼만 편하게 적어 주시면 되고, 잘 모르는 항목은 비워두셔도 괜찮습니다.</p>
   <p>작성하신 내용은 족보 편찬 자료로만 사용되며, 추진위 확인 후 온라인 족보 사이트 제작에 활용됩니다.</p>
-  <div class="deadline">제출 마감: <b>2026년 10월 31일</b> · 문의: 추진위 </div>
+  <div class="deadline">
+    <span>제출 마감: <b>2026년 10월 31일</b></span>
+    <span class="contact">
+      문의: 총무 홍국녕
+      <a class="call-btn" href="tel:010-8660-7977">📞 010-8660-7977</a>
+    </span>
+  </div>
   <div class="edit-banner" id="editBanner" style="display:none;">
     이전에 제출하신 내용을 불러왔습니다. 확인 후 필요한 부분을 수정하고 다시 저장해 주세요.
   </div>
-  <div class="prior-note">이미 제출하셨나요? 제출 후 안내된 <b>확인·수정 링크</b>로 다시 들어오시면 내용을 고칠 수 있습니다. 링크를 잃어버리셨다면 추진위 연락처로 문의해 주세요.</div>
+  <div class="prior-note">이미 제출하셨나요? 제출 후 안내된 <b>확인·수정 링크</b>로 다시 들어오시면 내용을 고칠 수 있습니다. 링크를 잃어버리셨다면 위 연락처로 문의해 주세요.</div>
 </div>
 
 <form id="jokboForm">
@@ -381,7 +396,7 @@
       <span>제출한 정보는 <b>남양홍씨 족보 편찬</b> 목적으로만 사용되며, 편찬 완료 후 온라인 족보 사이트 게재에 활용될 수 있습니다. 이에 동의합니다.<span class="req">*</span></span>
     </label>
     <button type="submit" class="submit-btn" id="submitBtn">제출하기</button>
-    <div class="submit-note">제출 후에도 추진위 연락처로 내용을 수정 요청하실 수 있습니다.</div>
+    <div class="submit-note">제출 후에도 위 연락처로 내용을 수정 요청하실 수 있습니다.</div>
   </div>
 
 </form>
