@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>족보 조사 관리자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --paper:#EEE6D2; --paper-deep:#E4D9BE; --line:#CBBB94;
+    --ink:#232C2F; --ink-soft:#5B6560;
+    --seal:#A23B2E; --seal-deep:#832E23;
+    --sheet:#FBF7EC; --sheet-border:#D9CCA9;
+    --ok:#3F6B4E; --warn:#9C7A22;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:'Noto Sans KR',sans-serif;line-height:1.5;
+    min-height:100vh;
+  }
+  h1,h2,.serif{font-family:'Noto Serif KR',serif;}
+
+  /* ---------- login screen ---------- */
+  #loginScreen{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+  }
+  .login-box{
+    background:var(--sheet);border:1px solid var(--sheet-border);border-radius:var(--radius);
+    max-width:400px;width:100%;padding:40px 32px;text-align:center;
+  }
+  .login-box .eyebrow{
+    font-size:13px;color:var(--seal-deep);font-weight:700;
+    border:1px solid var(--seal-deep);display:inline-block;padding:3px 10px;border-radius:2px;margin-bottom:18px;
+  }
+  .login-box h1{font-size:22px;margin:0 0 10px;}
+  .login-box p{font-size:13.5px;color:var(--ink-soft);margin:0 0 24px;}
+  .google-btn{
+    width:100%;padding:13px;border:1px solid var(--ink);background:var(--ink);color:#fff;
+    border-radius:var(--radius);font-size:14.5px;font-weight:700;font-family:inherit;cursor:pointer;
+  }
+  .denied-box{display:none;margin-top:20px;text-align:left;font-size:13px;color:var(--ink-soft);
+    background:var(--paper);border:1px solid var(--sheet-border);padding:14px;border-radius:var(--radius);}
+  .denied-box.show{display:block;}
+  .denied-box code{
+    display:block;background:#fff;border:1px solid var(--sheet-border);padding:8px;margin:8px 0;
+    font-size:12px;word-break:break-all;border-radius:2px;
+  }
+  .link-btn{background:none;border:none;color:var(--seal-deep);font-size:13px;cursor:pointer;padding:0;font-family:inherit;text-decoration:underline;}
+
+  /* ---------- dashboard shell ---------- */
+  #dashboard{display:none;}
+  #dashboard.show{display:block;}
+  .topbar{
+    background:var(--ink);color:#fff;padding:14px 22px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    position:sticky;top:0;z-index:20;
+  }
+  .topbar .title{font-family:'Noto Serif KR',serif;font-size:16px;font-weight:700;}
+  .topbar .who{font-size:12.5px;color:#C9BFA8;display:flex;align-items:center;gap:12px;}
+  .topbar .who button{background:none;border:1px solid #5B6560;color:#EEE6D2;padding:5px 10px;border-radius:2px;font-family:inherit;font-size:12px;cursor:pointer;}
+
+  .wrap{max-width:1100px;margin:0 auto;padding:22px;}
+
+  .stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
+  .stat-card{
+    background:var(--sheet);border:1px solid var(--sheet-border);border-radius:var(--radius);
+    padding:14px 18px;min-width:120px;
+  }
+  .stat-card .num{font-size:24px;font-weight:700;font-family:'Noto Serif KR',serif;color:var(--seal-deep);}
+  .stat-card .label{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+
+  .toolbar{
+    display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;
+  }
+  .toolbar input[type=search]{
+    flex:1;min-width:200px;padding:10px 12px;border:1px solid var(--sheet-border);
+    border-radius:var(--radius);font-size:14px;font-family:inherit;background:#fff;
+  }
+  .btn{
+    padding:10px 16px;border-radius:var(--radius);font-size:13.5px;font-weight:700;
+    font-family:inherit;cursor:pointer;border:1px solid var(--ink);background:#fff;color:var(--ink);
+  }
+  .btn.primary{background:var(--seal);color:#fff;border-color:var(--seal);}
+  .btn.ghost{background:transparent;}
+
+  table{width:100%;border-collapse:collapse;background:var(--sheet);border:1px solid var(--sheet-border);font-size:13.5px;}
+  th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--sheet-border);vertical-align:top;}
+  th{background:var(--paper-deep);font-size:12px;color:var(--ink-soft);font-weight:700;white-space:nowrap;}
+  tbody tr:hover{background:#F4EFDF;cursor:pointer;}
+  td.num-cell{text-align:center;}
+  select.status-select{
+    font-family:inherit;font-size:12.5px;padding:5px 6px;border-radius:2px;border:1px solid var(--sheet-border);
+  }
+  .status-접수{color:var(--warn);}
+  .status-확인중{color:#2E6B92;}
+  .status-완료{color:var(--ok);font-weight:700;}
+  .row-actions{white-space:nowrap;}
+  .row-actions button{background:none;border:none;color:var(--seal-deep);cursor:pointer;font-size:12.5px;font-family:inherit;padding:4px 6px;}
+
+  .empty-state{padding:60px 20px;text-align:center;color:var(--ink-soft);font-size:14px;}
+
+  /* ---------- detail modal ---------- */
+  .modal-backdrop{
+    position:fixed;inset:0;background:rgba(35,44,47,0.7);display:none;
+    align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;z-index:50;
+  }
+  .modal-backdrop.show{display:flex;}
+  .modal{
+    background:var(--sheet);border-radius:var(--radius);max-width:640px;width:100%;
+    padding:28px 26px 30px;margin-top:20px;
+  }
+  .modal h2{font-size:19px;margin:0 0 4px;}
+  .modal .sub{font-size:12.5px;color:var(--ink-soft);margin-bottom:20px;}
+  .modal-close{float:right;background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-soft);}
+  .dgroup{margin-bottom:18px;}
+  .dgroup h3{font-size:13px;color:var(--seal-deep);margin:0 0 8px;font-family:'Noto Serif KR',serif;}
+  .dgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:13.5px;}
+  .dgrid .k{color:var(--ink-soft);}
+  .dgrid .full{grid-column:1/-1;}
+  .child-block{border:1px solid var(--sheet-border);border-radius:var(--radius);padding:12px;margin-bottom:10px;background:#fff;}
+  .child-block .ctitle{font-weight:700;font-size:13px;margin-bottom:6px;}
+  hr.rule{border:none;border-top:1px dashed var(--sheet-border);margin:14px 0;}
+
+  @media (max-width:640px){
+    table thead{display:none;}
+    table, tbody, tr, td{display:block;width:100%;}
+    tbody tr{border-bottom:2px solid var(--sheet-border);padding:8px 4px;}
+    td{border:none;padding:4px 10px;}
+    td::before{content:attr(data-label);display:inline-block;width:74px;color:var(--ink-soft);font-size:11.5px;}
+    .dgrid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ 로그인 화면 ============ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <span class="eyebrow">관리자 전용</span>
+    <h1>족보 조사 관리자 페이지</h1>
+    <p>제출된 가족정보를 확인하고 내보내려면<br>등록된 구글 계정으로 로그인해 주세요.</p>
+    <button class="google-btn" id="googleLoginBtn">Google 계정으로 로그인</button>
+    <div class="denied-box" id="deniedBox">
+      <div><b id="deniedEmail"></b> 계정에는 관리자 권한이 없습니다.</div>
+      <div>관리자로 등록하려면 아래 UID를 Firestore <code>admins</code> 컬렉션에 문서 ID로 추가해야 합니다.</div>
+      <code id="deniedUid"></code>
+      <button class="link-btn" id="signOutFromDenied">다른 계정으로 로그인</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 대시보드 ============ -->
+<div id="dashboard">
+  <div class="topbar">
+    <div class="title">족보 조사 관리자</div>
+    <div class="who">
+      <span id="whoEmail"></span>
+      <button id="signOutBtn">로그아웃</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="stats">
+      <div class="stat-card"><div class="num" id="statTotal">0</div><div class="label">전체 제출</div></div>
+      <div class="stat-card"><div class="num" id="statPending">0</div><div class="label">미확인</div></div>
+      <div class="stat-card"><div class="num" id="statDone">0</div><div class="label">확인 완료</div></div>
+      <div class="stat-card"><div class="num" id="statChildren">0</div><div class="label">등록된 자녀 수</div></div>
+    </div>
+
+    <div class="toolbar">
+      <input type="search" id="searchInput" placeholder="작성자, 본인 성명, 연락처로 검색">
+      <button class="btn" id="refreshBtn">새로고침</button>
+      <button class="btn primary" id="exportBtn">엑셀로 내보내기</button>
+    </div>
+
+    <table id="subTable">
+      <thead>
+        <tr>
+          <th>제출일시</th><th>작성자</th><th>본인 성명</th><th>연락처</th>
+          <th>자녀</th><th>후손</th><th>상태</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="subTableBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none;">아직 제출된 응답이 없습니다.</div>
+  </div>
+</div>
+
+<!-- ============ 상세보기 모달 ============ -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <button class="modal-close" id="modalCloseBtn">&times;</button>
+    <h2 id="modalTitle">상세 정보</h2>
+    <div class="sub" id="modalSub"></div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot,
+  updateDoc, deleteDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+/* =========================================================
+   설정: jokbo-survey.html과 동일한 Firebase 프로젝트 설정값을 붙여넣으세요.
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+
+const app = firebaseConfig.apiKey ? initializeApp(firebaseConfig) : null;
+const auth = app ? getAuth(app) : null;
+const db = app ? getFirestore(app) : null;
+
+const loginScreen = document.getElementById('loginScreen');
+const dashboard = document.getElementById('dashboard');
+const deniedBox = document.getElementById('deniedBox');
+const deniedEmail = document.getElementById('deniedEmail');
+const deniedUid = document.getElementById('deniedUid');
+
+if (!app) {
+  document.querySelector('.login-box p').textContent =
+    'Firebase 설정이 아직 입력되지 않았습니다. 이 파일 상단의 firebaseConfig 값을 채워주세요.';
+  document.getElementById('googleLoginBtn').disabled = true;
+}
+
+document.getElementById('googleLoginBtn').addEventListener('click', async () => {
+  if (!auth) return;
+  try {
+    await signInWithPopup(auth, new GoogleAuthProvider());
+  } catch (err) {
+    alert('로그인에 실패했습니다: ' + err.message);
+  }
+});
+document.getElementById('signOutFromDenied').addEventListener('click', () => signOut(auth));
+document.getElementById('signOutBtn').addEventListener('click', () => signOut(auth));
+
+let unsubscribe = null;
+let allSubs = [];
+
+if (auth) {
+  onAuthStateChanged(auth, async (user) => {
+    deniedBox.classList.remove('show');
+    if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+
+    if (!user) {
+      loginScreen.style.display = 'flex';
+      dashboard.classList.remove('show');
+      return;
+    }
+
+    const adminSnap = await getDoc(doc(db, 'admins', user.uid));
+    if (!adminSnap.exists()) {
+      loginScreen.style.display = 'flex';
+      dashboard.classList.remove('show');
+      deniedEmail.textContent = user.email || '';
+      deniedUid.textContent = user.uid;
+      deniedBox.classList.add('show');
+      return;
+    }
+
+    loginScreen.style.display = 'none';
+    dashboard.classList.add('show');
+    document.getElementById('whoEmail').textContent = user.email || '';
+    startListening();
+  });
+}
+
+function startListening(){
+  const q = query(collection(db, 'submissions'), orderBy('submittedAt', 'desc'));
+  unsubscribe = onSnapshot(q, (snap) => {
+    allSubs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderTable();
+  }, (err) => {
+    console.error(err);
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('emptyState').textContent = '목록을 불러오지 못했습니다: ' + err.message;
+  });
+}
+document.getElementById('refreshBtn').addEventListener('click', renderTable);
+
+/* ---------- formatting helpers (동일 로직: Apps Script 버전과 통일) ---------- */
+function dateText(d){
+  if(!d) return '';
+  const parts = [d.y, d.m, d.d].filter(v => v !== '' && v != null);
+  if(parts.length === 0) return '';
+  const cal = d.calendar === 'lunar' ? '음력' : '양력';
+  return `${cal} ${d.y||''}.${d.m||''}.${d.d||''}`;
+}
+function eventText(evt){
+  if(!evt || !evt.has) return { when:'', place:'' };
+  return { when: dateText(evt.date), place: evt.place || '' };
+}
+function fmtTs(ts){
+  if(!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  if(isNaN(d)) return '';
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/* ---------- table render ---------- */
+const tbody = document.getElementById('subTableBody');
+const searchInput = document.getElementById('searchInput');
+searchInput.addEventListener('input', renderTable);
+
+function filteredSubs(){
+  const kw = searchInput.value.trim();
+  if(!kw) return allSubs;
+  return allSubs.filter(s => {
+    const w = s.writer || {}, se = s.self || {};
+    return [w.name_kr, w.phone, se.name_kr].some(v => (v||'').includes(kw));
+  });
+}
+
+function renderTable(){
+  const subs = filteredSubs();
+  document.getElementById('emptyState').style.display = subs.length ? 'none' : 'block';
+  document.getElementById('emptyState').textContent = '아직 제출된 응답이 없습니다.';
+
+  document.getElementById('statTotal').textContent = allSubs.length;
+  document.getElementById('statPending').textContent = allSubs.filter(s => (s.status||'접수') === '접수').length;
+  document.getElementById('statDone').textContent = allSubs.filter(s => s.status === '완료').length;
+  document.getElementById('statChildren').textContent = allSubs.reduce((sum,s)=> sum + ((s.children||[]).length), 0);
+
+  tbody.innerHTML = subs.map(s => {
+    const w = s.writer || {}, se = s.self || {};
+    const status = s.status || '접수';
+    return `
+      <tr data-id="${s.id}">
+        <td data-label="제출일시">${fmtTs(s.submittedAt) || (s.submittedAtClient||'').slice(0,16).replace('T',' ')}</td>
+        <td data-label="작성자">${escapeHtml(w.name_kr||'')}</td>
+        <td data-label="본인">${escapeHtml(se.name_kr||'')}</td>
+        <td data-label="연락처">${escapeHtml(w.phone||'')}</td>
+        <td data-label="자녀" class="num-cell">${(s.children||[]).length}</td>
+        <td data-label="후손" class="num-cell">${(s.descendants||[]).length}</td>
+        <td data-label="상태">
+          <select class="status-select status-${status}" data-status-id="${s.id}">
+            <option value="접수" ${status==='접수'?'selected':''}>접수</option>
+            <option value="확인중" ${status==='확인중'?'selected':''}>확인중</option>
+            <option value="완료" ${status==='완료'?'selected':''}>완료</option>
+          </select>
+        </td>
+        <td class="row-actions">
+          <button data-view-id="${s.id}">상세</button>
+          <button data-link-id="${s.id}">수정링크 복사</button>
+          <button data-del-id="${s.id}">삭제</button>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+tbody.addEventListener('click', async (e) => {
+  const viewBtn = e.target.closest('[data-view-id]');
+  if (viewBtn) { openDetail(viewBtn.getAttribute('data-view-id')); return; }
+
+  const linkBtn = e.target.closest('[data-link-id]');
+  if (linkBtn) {
+    const id = linkBtn.getAttribute('data-link-id');
+    const url = location.href.replace(/jokbo-admin\.html.*$/, 'jokbo-survey.html') + '?edit=' + id;
+    try {
+      await navigator.clipboard.writeText(url);
+      const orig = linkBtn.textContent;
+      linkBtn.textContent = '복사됨';
+      setTimeout(() => { linkBtn.textContent = orig; }, 1500);
+    } catch (err) {
+      prompt('아래 링크를 복사해 전달해 주세요:', url);
+    }
+    return;
+  }
+
+  const delBtn = e.target.closest('[data-del-id]');
+  if (delBtn) {
+    const id = delBtn.getAttribute('data-del-id');
+    if (confirm('이 응답을 삭제하시겠습니까? 되돌릴 수 없습니다.')) {
+      await deleteDoc(doc(db, 'submissions', id));
+    }
+    return;
+  }
+
+  const row = e.target.closest('tr[data-id]');
+  if (row && !e.target.closest('select') && !e.target.closest('button')) {
+    openDetail(row.getAttribute('data-id'));
+  }
+});
+
+tbody.addEventListener('change', async (e) => {
+  const sel = e.target.closest('[data-status-id]');
+  if (!sel) return;
+  const id = sel.getAttribute('data-status-id');
+  await updateDoc(doc(db, 'submissions', id), { status: sel.value, statusUpdatedAt: serverTimestamp() });
+});
+
+/* ---------- detail modal ---------- */
+const modalBackdrop = document.getElementById('modalBackdrop');
+document.getElementById('modalCloseBtn').addEventListener('click', () => modalBackdrop.classList.remove('show'));
+modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) modalBackdrop.classList.remove('show'); });
+
+function row(k,v){ return v ? `<div class="k">${k}</div><div>${escapeHtml(v)}</div>` : ''; }
+
+function openDetail(id){
+  const s = allSubs.find(x => x.id === id);
+  if (!s) return;
+  const w = s.writer||{}, f = s.father||{}, m = s.mother||{}, se = s.self||{}, sp = se.spouse||{};
+  const fD = eventText(f.death), fM = eventText(f.moved);
+  const mD = eventText(m.death), mM = eventText(m.moved);
+  const sD = eventText(se.death), sM = eventText(se.moved);
+  const spD = eventText(sp.death), spM = eventText(sp.moved);
+
+  document.getElementById('modalTitle').textContent = `${se.name_kr || '(이름 없음)'} 제출 상세`;
+  document.getElementById('modalSub').textContent = `작성자: ${w.name_kr||''} · ${fmtTs(s.submittedAt)}`;
+
+  let html = '';
+  html += `<div class="dgroup"><h3>작성자</h3><div class="dgrid">
+    ${row('성명', w.name_kr)}${row('한자', w.name_hj)}${row('연락처', w.phone)}${row('비고', w.relationNote)}
+  </div></div>`;
+
+  html += `<div class="dgroup"><h3>父 부친</h3><div class="dgrid">
+    ${row('성명', f.name_kr)}${row('한자', f.name_hj)}${row('계', f.gye)}${row('파', f.pa)}
+    ${row('사망일', fD.when)}${row('묘 위치', fD.place)}${row('이장일', fM.when)}${row('이장 위치', fM.place)}
+  </div></div>`;
+
+  html += `<div class="dgroup"><h3>母 모친</h3><div class="dgrid">
+    ${row('성명', m.name_kr)}${row('한자', m.name_hj)}${row('본관', m.bongwan)}
+    ${row('사망일', mD.when)}${row('묘 위치', mD.place)}${row('이장일', mM.when)}${row('이장 위치', mM.place)}
+  </div></div>`;
+  if (s.parentsNote) html += `<div class="dgroup"><div class="dgrid"><div class="full k">부모님 기타사항</div><div class="full">${escapeHtml(s.parentsNote)}</div></div></div>`;
+
+  html += `<div class="dgroup"><h3>子 본인</h3><div class="dgrid">
+    ${row('성명', se.name_kr)}${row('한자', se.name_hj)}
+    ${row('출생일', dateText(se.birth&&se.birth.date))}${row('출생지', se.birth&&se.birth.place)}
+    ${row('사망일', sD.when)}${row('묘 위치', sD.place)}${row('이장일', sM.when)}${row('이장 위치', sM.place)}
+  </div></div>`;
+
+  if (se.hasSpouse) {
+    html += `<div class="dgroup"><h3>배우자</h3><div class="dgrid">
+      ${row('성명', sp.name_kr)}${row('한자', sp.name_hj)}${row('본관', sp.bongwan)}
+      ${row('출생일', dateText(sp.birth&&sp.birth.date))}${row('출생지', sp.birth&&sp.birth.place)}
+      ${row('사망일', spD.when)}${row('묘 위치', spD.place)}${row('이장일', spM.when)}${row('이장 위치', spM.place)}
+      ${row('배우자 부친', sp.fatherName)}${row('배우자 모친', sp.motherName)}${row('배우자 모친 본관', sp.motherBongwan)}
+    </div></div>`;
+  }
+
+  const children = s.children || [];
+  if (children.length) {
+    html += `<hr class="rule"><h3 style="font-family:'Noto Serif KR',serif;font-size:13px;color:var(--seal-deep);margin-bottom:10px;">孫 자녀 (${children.length}명)</h3>`;
+    children.forEach((c,i) => {
+      const cD = eventText(c.death), cM = eventText(c.moved), csp = c.spouse||{};
+      html += `<div class="child-block">
+        <div class="ctitle">${i+1}. ${escapeHtml(c.name_kr||'(이름없음)')} · ${c.gender==='son'?'아들(孫)':'딸(外孫)'}</div>
+        <div class="dgrid">
+          ${row('한자', c.name_hj)}
+          ${row('출생일', dateText(c.birth&&c.birth.date))}${row('출생지', c.birth&&c.birth.place)}
+          ${row('사망일', cD.when)}${row('묘 위치', cD.place)}
+          ${c.hasSpouse ? row('배우자', csp.name_kr) : ''}
+        </div>
+      </div>`;
+    });
+  }
+
+  const desc = s.descendants || [];
+  if (desc.length) {
+    html += `<hr class="rule"><h3 style="font-family:'Noto Serif KR',serif;font-size:13px;color:var(--seal-deep);margin-bottom:10px;">孫 이하 후손 (${desc.length}명)</h3>`;
+    html += `<div class="dgrid">` + desc.map(d => row(d.generation||'후손', `${d.name_kr||''} ${d.birthText? '('+d.birthText+')':''}`)).join('') + `</div>`;
+  }
+
+  if (s.etc) html += `<hr class="rule"><div class="dgrid"><div class="full k">기타사항</div><div class="full">${escapeHtml(s.etc)}</div></div>`;
+
+  document.getElementById('modalBody').innerHTML = html;
+  modalBackdrop.classList.add('show');
+}
+
+/* ---------- excel export ---------- */
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const subs = filteredSubs();
+  if (!subs.length) { alert('내보낼 데이터가 없습니다.'); return; }
+
+  const mainHeader = ['제출ID','제출일시','상태','작성자_성명','작성자_연락처',
+    '부친_성명','부친_사망일','부친_묘위치','모친_성명','모친_사망일','모친_묘위치',
+    '본인_성명','본인_출생일','본인_출생지','본인_사망일',
+    '배우자_유무','배우자_성명','자녀수','후손수'];
+  const mainRows = subs.map(s => {
+    const w=s.writer||{}, f=s.father||{}, m=s.mother||{}, se=s.self||{}, sp=se.spouse||{};
+    const fD=eventText(f.death), mD=eventText(m.death), sD=eventText(se.death);
+    return [
+      s.id, fmtTs(s.submittedAt), s.status||'접수', w.name_kr||'', w.phone||'',
+      f.name_kr||'', fD.when, fD.place, m.name_kr||'', mD.when, mD.place,
+      se.name_kr||'', dateText(se.birth&&se.birth.date), (se.birth&&se.birth.place)||'', sD.when,
+      se.hasSpouse?'있음':'없음', sp.name_kr||'', (s.children||[]).length, (s.descendants||[]).length
+    ];
+  });
+
+  const childHeader = ['제출ID','본인_성명','구분','자녀_성명','자녀_한자','출생일','출생지','사망일','묘위치','배우자_유무','배우자_성명'];
+  const childRows = [];
+  subs.forEach(s => {
+    (s.children||[]).forEach(c => {
+      const cD = eventText(c.death), csp = c.spouse||{};
+      childRows.push([
+        s.id, (s.self&&s.self.name_kr)||'', c.gender==='son'?'아들(孫)':'딸(外孫)',
+        c.name_kr||'', c.name_hj||'', dateText(c.birth&&c.birth.date), (c.birth&&c.birth.place)||'',
+        cD.when, cD.place, c.hasSpouse?'있음':'없음', csp.name_kr||''
+      ]);
+    });
+  });
+
+  const descHeader = ['제출ID','본인_성명','세대','성명','출생일(텍스트)'];
+  const descRows = [];
+  subs.forEach(s => {
+    (s.descendants||[]).forEach(d => {
+      descRows.push([s.id, (s.self&&s.self.name_kr)||'', d.generation||'', d.name_kr||'', d.birthText||'']);
+    });
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([mainHeader, ...mainRows]), '기본정보');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([childHeader, ...childRows]), '자녀');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([descHeader, ...descRows]), '후손');
+
+  XLSX.writeFile(wb, `족보조사_응답_${new Date().toISOString().slice(0,10)}.xlsx`);
+});
+</script>
+</body>
+</html>

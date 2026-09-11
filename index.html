@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>족보 편찬 가족정보 조사</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEE6D2;
+    --paper-deep:#E4D9BE;
+    --line:#CBBB94;
+    --ink:#232C2F;
+    --ink-soft:#5B6560;
+    --seal:#A23B2E;
+    --seal-deep:#832E23;
+    --sheet:#FBF7EC;
+    --sheet-border:#D9CCA9;
+    --ok:#3F6B4E;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:var(--paper);
+    background-image:
+      linear-gradient(180deg, var(--paper) 0%, var(--paper-deep) 100%);
+    color:var(--ink);
+    font-family:'Noto Sans KR',sans-serif;
+    line-height:1.6;
+    padding-bottom:100px;
+  }
+  h1,h2,h3,.serif{font-family:'Noto Serif KR',serif;}
+  a{color:var(--seal);}
+
+  /* ---- top bar ---- */
+  .topbar{
+    position:sticky; top:0; z-index:40;
+    background:rgba(238,230,210,0.94);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line);
+  }
+  .topbar-inner{
+    max-width:640px;margin:0 auto;padding:10px 20px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+  }
+  .topbar-title{font-size:14px;font-weight:700;letter-spacing:0.02em;}
+  .progress-track{
+    height:3px;background:var(--line);border-radius:2px;overflow:hidden;
+    max-width:640px;margin:0 auto;
+  }
+  .progress-fill{height:100%;width:0%;background:var(--seal);transition:width .25s ease;}
+
+  /* ---- hero ---- */
+  .hero{max-width:640px;margin:0 auto;padding:44px 20px 28px;}
+  .hero .eyebrow{
+    font-size:13px;color:var(--seal-deep);font-weight:700;
+    display:inline-block;padding:3px 10px;border:1px solid var(--seal-deep);
+    border-radius:2px;margin-bottom:16px;
+  }
+  .hero h1{font-size:28px;line-height:1.35;margin:0 0 12px;font-weight:700;}
+  .hero p{color:var(--ink-soft);font-size:15px;margin:0 0 6px;max-width:52ch;}
+  .hero .deadline{
+    margin-top:18px;padding:12px 16px;background:var(--sheet);
+    border:1px solid var(--sheet-border);border-left:3px solid var(--seal);
+    font-size:14px;color:var(--ink);
+  }
+  .hero .deadline b{color:var(--seal-deep);}
+  .hero .edit-banner{
+    margin-top:14px;padding:12px 16px;background:#EAF0E9;border:1px solid #B9CDB8;
+    border-left:3px solid var(--ok);font-size:13.5px;color:var(--ink);
+  }
+  .hero .prior-note{margin-top:14px;font-size:12.5px;color:var(--ink-soft);}
+  .hero .prior-note b{color:var(--ink);}
+
+  form{max-width:640px;margin:0 auto;padding:0 20px;}
+
+  /* ---- section ---- */
+  .section{
+    margin-top:14px;padding:26px 22px 30px;
+    background:var(--sheet);border:1px solid var(--sheet-border);
+    border-radius:var(--radius);
+  }
+  .section-head{margin-bottom:20px;}
+  .section-head .gen{
+    font-family:'Noto Serif KR',serif;font-size:22px;color:var(--seal-deep);
+    display:inline-block;margin-right:10px;
+  }
+  .section-head h2{font-size:18px;margin:6px 0 4px;font-weight:700;}
+  .section-head .desc{font-size:13px;color:var(--ink-soft);margin:0;}
+
+  .field{margin-bottom:16px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .field label{
+    display:block;font-size:12.5px;color:var(--ink-soft);
+    margin-bottom:5px;font-weight:500;
+  }
+  .field label .req{color:var(--seal);margin-left:2px;}
+  .field label .opt{color:var(--ink-soft);font-weight:400;font-size:11.5px;margin-left:4px;}
+  input[type=text],input[type=tel],input[type=number],textarea,select{
+    width:100%;padding:11px 12px;font-size:15px;font-family:inherit;
+    border:1px solid var(--sheet-border);border-radius:var(--radius);
+    background:#fff;color:var(--ink);
+  }
+  input:focus,textarea:focus,select:focus{
+    outline:2px solid var(--seal-deep);outline-offset:1px;border-color:var(--seal-deep);
+  }
+  textarea{min-height:70px;resize:vertical;}
+
+  /* date block: 음/양 + 년월일 */
+  .datewrap{
+    background:var(--paper);border:1px solid var(--sheet-border);
+    border-radius:var(--radius);padding:12px;margin-top:4px;
+  }
+  .calendar-toggle{display:flex;gap:14px;margin-bottom:10px;font-size:13.5px;}
+  .calendar-toggle label{display:flex;align-items:center;gap:5px;color:var(--ink);font-weight:500;margin:0;}
+  .ymd{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .ymd input{text-align:center;}
+  .place-input{margin-top:8px;}
+
+  /* yes/no toggle for 사망/이장 */
+  .yn-toggle{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 12px;background:var(--paper);border:1px solid var(--sheet-border);
+    border-radius:var(--radius);margin-bottom:8px;cursor:pointer;
+  }
+  .yn-toggle span{font-size:13.5px;font-weight:500;}
+  .switch{
+    position:relative;width:38px;height:22px;background:#c7bda0;border-radius:12px;
+    flex-shrink:0;transition:background .15s;
+  }
+  .switch::after{
+    content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;
+    border-radius:50%;background:#fff;transition:transform .15s;
+  }
+  .yn-toggle.on .switch{background:var(--seal);}
+  .yn-toggle.on .switch::after{transform:translateX(16px);}
+  .subfields{display:none;padding-top:6px;}
+  .subfields.show{display:block;}
+
+  hr.rule{border:none;border-top:1px dashed var(--sheet-border);margin:20px 0;}
+  .subhead{font-size:13.5px;font-weight:700;color:var(--ink);margin:18px 0 10px;}
+
+  /* dynamic cards (children / descendants) */
+  .card{
+    border:1px solid var(--sheet-border);border-radius:var(--radius);
+    padding:18px;margin-bottom:14px;background:#fff;position:relative;
+  }
+  .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .card-head .card-title{font-size:14px;font-weight:700;}
+  .card-remove{
+    background:none;border:none;color:var(--seal-deep);font-size:12.5px;
+    cursor:pointer;padding:4px 6px;font-family:inherit;
+  }
+  .gender-toggle{display:flex;gap:8px;margin-bottom:14px;}
+  .gender-toggle button{
+    flex:1;padding:9px;border:1px solid var(--sheet-border);background:var(--paper);
+    border-radius:var(--radius);font-size:13.5px;font-family:inherit;cursor:pointer;color:var(--ink-soft);
+  }
+  .gender-toggle button.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  .add-btn{
+    width:100%;padding:13px;border:1.5px dashed var(--seal-deep);background:transparent;
+    color:var(--seal-deep);border-radius:var(--radius);font-size:14px;font-weight:700;
+    font-family:inherit;cursor:pointer;margin-top:4px;
+  }
+  .add-btn:active{background:rgba(162,59,46,0.06);}
+  .empty-note{font-size:13px;color:var(--ink-soft);padding:10px 2px;}
+
+  .desc-row{display:grid;grid-template-columns:1.1fr 1fr;gap:10px;}
+
+  /* consent + submit */
+  .consent{
+    display:flex;gap:10px;align-items:flex-start;padding:14px;background:var(--paper);
+    border:1px solid var(--sheet-border);border-radius:var(--radius);font-size:13px;color:var(--ink-soft);
+  }
+  .consent input{margin-top:3px;width:16px;height:16px;flex-shrink:0;}
+  .submit-btn{
+    width:100%;padding:16px;margin-top:16px;background:var(--seal);color:#fff;border:none;
+    border-radius:var(--radius);font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;
+  }
+  .submit-btn:disabled{background:#bfae94;cursor:not-allowed;}
+  .submit-note{font-size:12px;color:var(--ink-soft);text-align:center;margin-top:10px;}
+
+  .foot{max-width:640px;margin:30px auto 0;padding:0 20px;font-size:12px;color:var(--ink-soft);}
+
+  /* success overlay */
+  .overlay{
+    position:fixed;inset:0;background:rgba(35,44,47,0.92);z-index:100;
+    display:none;align-items:center;justify-content:center;padding:24px;
+  }
+  .overlay.show{display:flex;}
+  .overlay-box{background:var(--sheet);border-radius:var(--radius);max-width:420px;width:100%;padding:32px 26px;text-align:center;}
+  .overlay-box h2{font-size:20px;margin:0 0 10px;}
+  .overlay-box p{font-size:14px;color:var(--ink-soft);margin:0 0 20px;}
+  .overlay-box button{
+    background:var(--ink);color:#fff;border:none;padding:12px 20px;border-radius:var(--radius);
+    font-family:inherit;font-size:14px;cursor:pointer;
+  }
+  .edit-link-box{
+    background:var(--paper);border:1px solid var(--sheet-border);border-radius:var(--radius);
+    padding:14px;margin-bottom:18px;text-align:left;
+  }
+  .edit-link-label{font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;}
+  .edit-link-row{display:flex;gap:6px;}
+  .edit-link-row input{
+    flex:1;padding:9px 10px;font-size:12.5px;border:1px solid var(--sheet-border);
+    border-radius:var(--radius);background:#fff;color:var(--ink);
+  }
+  .edit-link-row button{
+    padding:9px 14px;border:1px solid var(--ink);background:#fff;color:var(--ink);
+    border-radius:var(--radius);font-family:inherit;font-size:12.5px;cursor:pointer;
+  }
+  .err-box{
+    display:none;background:#F6E2DE;border:1px solid var(--seal);color:var(--seal-deep);
+    padding:12px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:14px;
+  }
+  .err-box.show{display:block;}
+
+  @media (max-width:400px){
+    .field-row,.ymd,.desc-row{grid-template-columns:1fr 1fr;}
+    .ymd{grid-template-columns:1fr 1fr 1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="topbar-title">족보 편찬 가족정보 조사</div>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+</div>
+
+<div class="hero">
+  <span class="eyebrow">족보 수단(收單) 조사</span>
+  <h1>우리 집안의 이야기를<br>다음 세대까지 정확하게.</h1>
+  <p>기존 종이 수단양식을 그대로 온라인으로 옮겼습니다. 아는 만큼만 편하게 적어 주시면 되고, 잘 모르는 항목은 비워두셔도 괜찮습니다.</p>
+  <p>작성하신 내용은 족보 편찬 자료로만 사용되며, 추진위 확인 후 온라인 족보 사이트 제작에 활용됩니다.</p>
+  <div class="deadline">제출 마감: <b>2026년 10월 31일</b> · 문의: 추진위</div>
+  <div class="edit-banner" id="editBanner" style="display:none;">
+    이전에 제출하신 내용을 불러왔습니다. 확인 후 필요한 부분을 수정하고 다시 저장해 주세요.
+  </div>
+  <div class="prior-note">이미 제출하셨나요? 제출 후 안내된 <b>확인·수정 링크</b>로 다시 들어오시면 내용을 고칠 수 있습니다. 링크를 잃어버리셨다면 추진위 연락처로 문의해 주세요.</div>
+</div>
+
+<form id="jokboForm">
+
+  <!-- 0. 작성자 -->
+  <div class="section" data-sec>
+    <div class="section-head">
+      <span class="gen serif">記</span>
+      <h2>작성자 정보</h2>
+      <p class="desc">이 조사를 작성하시는 분의 정보입니다. 아래 &lsquo;본인 정보&rsquo;와 동일인이어도 다시 적어 주세요.</p>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>성명 (한글)<span class="req">*</span></label>
+        <input type="text" required data-path="writer.name_kr" placeholder="예: 홍길동">
+      </div>
+      <div class="field">
+        <label>한자<span class="opt">(선택)</span></label>
+        <input type="text" data-path="writer.name_hj" placeholder="예: 洪吉東">
+      </div>
+    </div>
+    <div class="field">
+      <label>연락처<span class="req">*</span></label>
+      <input type="tel" required data-path="writer.phone" placeholder="010-0000-0000">
+    </div>
+    <div class="field">
+      <label>본인과의 관계 / 참고사항<span class="opt">(선택)</span></label>
+      <input type="text" data-path="writer.relationNote" placeholder="예: 본인 작성, 또는 부친을 대신하여 작성 등">
+    </div>
+  </div>
+
+  <!-- 1. 부친 -->
+  <div class="section" data-sec>
+    <div class="section-head">
+      <span class="gen serif">父</span>
+      <h2>부친(父) 정보</h2>
+      <p class="desc">본인의 부친에 대한 정보입니다.</p>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>이름 (한글)</label><input type="text" data-path="father.name_kr"></div>
+      <div class="field"><label>한자<span class="opt">(선택)</span></label><input type="text" data-path="father.name_hj"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>계<span class="opt">(선택)</span></label><input type="text" data-path="father.gye"></div>
+      <div class="field"><label>파<span class="opt">(선택)</span></label><input type="text" data-path="father.pa"></div>
+    </div>
+    <div id="father-death"></div>
+    <div id="father-moved"></div>
+  </div>
+
+  <!-- 2. 모친 -->
+  <div class="section" data-sec>
+    <div class="section-head">
+      <span class="gen serif">母</span>
+      <h2>모친(母) 정보</h2>
+      <p class="desc">본인의 모친에 대한 정보입니다.</p>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>이름 (한글)</label><input type="text" data-path="mother.name_kr"></div>
+      <div class="field"><label>한자<span class="opt">(선택)</span></label><input type="text" data-path="mother.name_hj"></div>
+    </div>
+    <div class="field">
+      <label>본관<span class="opt">(선택)</span></label>
+      <input type="text" data-path="mother.bongwan" placeholder="예: 김해 김씨">
+    </div>
+    <div id="mother-death"></div>
+    <div id="mother-moved"></div>
+    <hr class="rule">
+    <div class="field">
+      <label>부모님 관련 기타사항<span class="opt">(선택)</span></label>
+      <textarea data-path="parentsNote" placeholder="이장 예정, 추가로 남기고 싶은 사항 등"></textarea>
+    </div>
+  </div>
+
+  <!-- 3. 본인 -->
+  <div class="section" data-sec>
+    <div class="section-head">
+      <span class="gen serif">子</span>
+      <h2>본인 정보</h2>
+      <p class="desc">족보에 등재될 본인(작성자 본인)의 정보입니다.</p>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>이름 (한글)<span class="req">*</span></label><input type="text" required data-path="self.name_kr"></div>
+      <div class="field"><label>한자<span class="opt">(선택)</span></label><input type="text" data-path="self.name_hj"></div>
+    </div>
+    <div class="subhead">출생 정보</div>
+    <div id="self-birth"></div>
+    <div id="self-death"></div>
+    <div id="self-moved"></div>
+    <hr class="rule">
+    <div class="yn-toggle" id="self-spouse-toggle">
+      <span>배우자가 있습니다</span><div class="switch"></div>
+    </div>
+    <div class="subfields" id="self-spouse-fields"></div>
+  </div>
+
+  <!-- 4. 자녀 -->
+  <div class="section" data-sec>
+    <div class="section-head">
+      <span class="gen serif">孫</span>
+      <h2>자녀 정보</h2>
+      <p class="desc">아들은 &lsquo;孫&rsquo;, 딸은 &lsquo;外孫&rsquo; 항목에 반영됩니다. 자녀 수만큼 추가해 주세요.</p>
+    </div>
+    <div id="childrenList"></div>
+    <div class="empty-note" id="childrenEmpty">아직 추가된 자녀가 없습니다.</div>
+    <button type="button" class="add-btn" id="addChildBtn">+ 자녀 추가</button>
+  </div>
+
+  <!-- 5. 손주 이하 -->
+  <div class="section" data-sec>
+    <div class="section-head">
+      <span class="gen serif">孫 · 曾孫</span>
+      <h2>손주 이하 후손</h2>
+      <p class="desc">손주, 증손주 등 그 이하 세대는 이름과 출생일만 간단히 남겨 주세요. 자세한 정보는 추후 추진위에서 별도 확인합니다.</p>
+    </div>
+    <div id="descList"></div>
+    <div class="empty-note" id="descEmpty">아직 추가된 후손이 없습니다.</div>
+    <button type="button" class="add-btn" id="addDescBtn">+ 후손 추가</button>
+  </div>
+
+  <!-- 6. 기타 및 제출 -->
+  <div class="section" data-sec>
+    <div class="section-head">
+      <span class="gen serif">記</span>
+      <h2>기타사항 및 제출</h2>
+      <p class="desc">기존에 소장하신 족보가 있거나 수정이 필요한 부분이 있으면 알려 주세요.</p>
+    </div>
+    <div class="field">
+      <label>기타사항<span class="opt">(선택)</span></label>
+      <textarea data-path="etc" placeholder="예: 기존 족보 000쪽 오류 정정 요청, 사진 자료 보유 등"></textarea>
+    </div>
+    <div class="err-box" id="errBox"></div>
+    <label class="consent">
+      <input type="checkbox" id="consentBox">
+      <span>제출한 정보는 <b>제주시농협 족보 편찬(추진위)</b> 목적으로만 사용되며, 편찬 완료 후 온라인 족보 사이트 게재에 활용될 수 있습니다. 이에 동의합니다.<span class="req">*</span></span>
+    </label>
+    <button type="submit" class="submit-btn" id="submitBtn">제출하기</button>
+    <div class="submit-note">제출 후에도 추진위 연락처로 내용을 수정 요청하실 수 있습니다.</div>
+  </div>
+
+</form>
+
+<div class="foot">
+  작성요령: 성명은 한글로 작성 (한자는 선택), 지명·주소는 한글로 작성하는 것을 원칙으로 합니다.
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="overlay-box">
+    <h2 id="overlayTitle">제출이 완료되었습니다</h2>
+    <p id="overlayDesc">소중한 가족 정보를 남겨 주셔서 감사합니다. 추진위에서 확인 후 순차적으로 족보에 반영하겠습니다.</p>
+    <div class="edit-link-box" id="editLinkBox" style="display:none;">
+      <div class="edit-link-label">나중에 내용을 확인하거나 고치려면 이 링크가 필요합니다. 꼭 저장해 주세요.</div>
+      <div class="edit-link-row">
+        <input type="text" id="editLinkInput" readonly>
+        <button type="button" id="copyEditLinkBtn">복사</button>
+      </div>
+    </div>
+    <button type="button" id="overlayClose">닫기</button>
+  </div>
+</div>
+
+<script type="module">
+/* =========================================================
+   설정: Firebase 프로젝트 설정값을 아래에 붙여넣으세요.
+   (설정 방법은 함께 전달한 FIREBASE_SETUP.md 참고)
+   여기 적히는 값들은 "비밀키"가 아니라 프로젝트 식별용 공개 설정입니다.
+   실제 접근 제어는 Firestore 보안 규칙(firestore.rules)이 담당합니다.
+   ========================================================= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getFirestore, collection, doc, addDoc, updateDoc, getDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+
+let __db = null;
+if (firebaseConfig.apiKey) {
+  const app = initializeApp(firebaseConfig);
+  __db = getFirestore(app);
+}
+
+window.__submitJokbo = async function (payload) {
+  if (!__db) throw new Error("firebase-not-configured");
+  const ref = await addDoc(collection(__db, "submissions"), {
+    ...payload,
+    submittedAt: serverTimestamp(),
+    submittedAtClient: new Date().toISOString(),
+    status: "접수"
+  });
+  return ref.id;
+};
+
+/* 본인 확인/수정: 제출 시 받은 비공개 링크(?edit=문서ID)로 돌아왔을 때 사용 */
+window.__loadJokbo = async function (id) {
+  if (!__db) throw new Error("firebase-not-configured");
+  const snap = await getDoc(doc(__db, "submissions", id));
+  if (!snap.exists()) throw new Error("not-found");
+  return snap.data();
+};
+
+window.__updateJokbo = async function (id, payload) {
+  if (!__db) throw new Error("firebase-not-configured");
+  const { submittedAt, submittedAtClient, status, ...rest } = payload;
+  await updateDoc(doc(__db, "submissions", id), {
+    ...rest,
+    lastEditedAt: serverTimestamp(),
+    lastEditedAtClient: new Date().toISOString()
+  });
+  return id;
+};
+
+</script>
+
+<script>
+/* ---------- state ---------- */
+function uid(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+}
+function emptyDate(){ return { calendar:"solar", y:"", m:"", d:"" }; }
+function emptyEvent(withPlace){ return { has:false, date: emptyDate(), place: withPlace ? "" : undefined }; }
+function emptySpouse(){
+  return {
+    name_kr:"", name_hj:"", bongwan:"",
+    birth:{ date: emptyDate(), place:"" },
+    death: emptyEvent(true),
+    moved: emptyEvent(true),
+    fatherName:"", motherName:"", motherBongwan:""
+  };
+}
+function emptyChild(gender){
+  return {
+    id: uid(),
+    gender: gender || "son",
+    name_kr:"", name_hj:"",
+    birth:{ date: emptyDate(), place:"" },
+    death: emptyEvent(true),
+    moved: emptyEvent(true),
+    hasSpouse:false,
+    spouse: emptySpouse()
+  };
+}
+function emptyDescendant(){
+  return {
+    id: uid(),
+    generation:"손주", parentRef:"",
+    name_kr:"", birthText:""
+  };
+}
+
+const state = {
+  writer:{ name_kr:"", name_hj:"", phone:"", relationNote:"" },
+  father:{ name_kr:"", name_hj:"", gye:"", pa:"", death:emptyEvent(true), moved:emptyEvent(true) },
+  mother:{ name_kr:"", name_hj:"", bongwan:"", death:emptyEvent(true), moved:emptyEvent(true) },
+  parentsNote:"",
+  self:{
+    name_kr:"", name_hj:"",
+    birth:{ date: emptyDate(), place:"" },
+    death: emptyEvent(true),
+    moved: emptyEvent(true),
+    hasSpouse:false,
+    spouse: emptySpouse()
+  },
+  children:[],
+  descendants:[],
+  etc:""
+};
+
+/* ---------- helpers ---------- */
+function getPath(obj, path){
+  return path.split('.').reduce((o,k)=> (o==null? undefined : o[k]), obj);
+}
+function setPath(obj, path, val){
+  const keys = path.split('.');
+  let o = obj;
+  for(let i=0;i<keys.length-1;i++){ o = o[keys[i]]; }
+  o[keys[keys.length-1]] = val;
+}
+
+/* ---------- date block builder ---------- */
+function dateBlockHTML(pathPrefix, withPlace, placeLabel){
+  return `
+    <div class="datewrap" data-datewrap="${pathPrefix}">
+      <div class="calendar-toggle">
+        <label><input type="radio" name="cal-${pathPrefix}" value="solar" data-cal-path="${pathPrefix}.calendar" checked> 양력</label>
+        <label><input type="radio" name="cal-${pathPrefix}" value="lunar" data-cal-path="${pathPrefix}.calendar"> 음력</label>
+      </div>
+      <div class="ymd">
+        <input type="number" placeholder="년" data-path="${pathPrefix}.y">
+        <input type="number" placeholder="월" min="1" max="12" data-path="${pathPrefix}.m">
+        <input type="number" placeholder="일" min="1" max="31" data-path="${pathPrefix}.d">
+      </div>
+      ${withPlace ? `<div class="place-input"><input type="text" placeholder="${placeLabel}" data-path="${pathPrefix.replace(/\.date$/,'')}.place"></div>` : ''}
+    </div>`;
+}
+
+/* yes/no + date event block, e.g. 사망 or 이장 */
+function eventBlockHTML(pathPrefix, label, placeLabel){
+  return `
+    <div class="yn-toggle" data-yn="${pathPrefix}">
+      <span>${label}</span><div class="switch"></div>
+    </div>
+    <div class="subfields" data-subfields="${pathPrefix}">
+      ${dateBlockHTML(pathPrefix + '.date', true, placeLabel)}
+    </div>`;
+}
+
+function spouseFieldsHTML(pathPrefix){
+  return `
+    <div class="field-row">
+      <div class="field"><label>배우자 성명 (한글)</label><input type="text" data-path="${pathPrefix}.name_kr"></div>
+      <div class="field"><label>한자<span class="opt">(선택)</span></label><input type="text" data-path="${pathPrefix}.name_hj"></div>
+    </div>
+    <div class="field"><label>본관<span class="opt">(선택)</span></label><input type="text" data-path="${pathPrefix}.bongwan"></div>
+    <div class="subhead">배우자 출생 정보</div>
+    ${dateBlockHTML(pathPrefix + '.birth.date', true, '출생지')}
+    ${eventBlockHTML(pathPrefix + '.death', '사망하셨습니다', '묘 위치')}
+    ${eventBlockHTML(pathPrefix + '.moved', '이장하셨습니다', '이장 위치')}
+    <hr class="rule">
+    <div class="subhead">배우자의 부모님 (사돈 정보)</div>
+    <div class="field-row">
+      <div class="field"><label>부친 성명</label><input type="text" data-path="${pathPrefix}.fatherName"></div>
+      <div class="field"><label>모친 성명</label><input type="text" data-path="${pathPrefix}.motherName"></div>
+    </div>
+    <div class="field"><label>모친 본관<span class="opt">(선택)</span></label><input type="text" data-path="${pathPrefix}.motherBongwan"></div>
+  `;
+}
+
+/* ---------- render static event blocks (father/mother/self) ---------- */
+document.getElementById('father-death').innerHTML = eventBlockHTML('father.death','사망하셨습니다','묘 위치');
+document.getElementById('father-moved').innerHTML = eventBlockHTML('father.moved','이장하셨습니다','이장 위치');
+document.getElementById('mother-death').innerHTML = eventBlockHTML('mother.death','사망하셨습니다','묘 위치');
+document.getElementById('mother-moved').innerHTML = eventBlockHTML('mother.moved','이장하셨습니다','이장 위치');
+document.getElementById('self-birth').innerHTML = dateBlockHTML('self.birth.date', true, '출생지');
+document.getElementById('self-death').innerHTML = eventBlockHTML('self.death','사망하셨습니다','묘 위치');
+document.getElementById('self-moved').innerHTML = eventBlockHTML('self.moved','이장하셨습니다','이장 위치');
+document.getElementById('self-spouse-fields').innerHTML = spouseFieldsHTML('self.spouse');
+
+/* ---------- children ---------- */
+const childrenListEl = document.getElementById('childrenList');
+const childrenEmptyEl = document.getElementById('childrenEmpty');
+
+function renderChildCard(child, index){
+  const wrap = document.createElement('div');
+  wrap.className = 'card';
+  wrap.dataset.childId = child.id;
+  wrap.innerHTML = `
+    <div class="card-head">
+      <span class="card-title">자녀 ${index+1}</span>
+      <button type="button" class="card-remove" data-remove-child="${child.id}">삭제</button>
+    </div>
+    <div class="gender-toggle">
+      <button type="button" data-gender="son" class="${child.gender==='son'?'active':''}">아들 (孫)</button>
+      <button type="button" data-gender="daughter" class="${child.gender==='daughter'?'active':''}">딸 (外孫)</button>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>이름 (한글)</label><input type="text" data-path="__child.${child.id}.name_kr"></div>
+      <div class="field"><label>한자<span class="opt">(선택)</span></label><input type="text" data-path="__child.${child.id}.name_hj"></div>
+    </div>
+    <div class="subhead">출생 정보</div>
+    <div data-slot="birth"></div>
+    <div data-slot="death"></div>
+    <div data-slot="moved"></div>
+    <hr class="rule">
+    <div class="yn-toggle" data-yn="__child.${child.id}.hasSpouseFlag">
+      <span>배우자가 있습니다</span><div class="switch"></div>
+    </div>
+    <div class="subfields" data-subfields="__child.${child.id}.hasSpouseFlag" data-slot="spouse"></div>
+  `;
+  wrap.querySelector('[data-slot="birth"]').innerHTML = dateBlockHTML(`__child.${child.id}.birth.date`, true, '출생지');
+  wrap.querySelector('[data-slot="death"]').innerHTML = eventBlockHTML(`__child.${child.id}.death`, '사망하였습니다', '묘 위치');
+  wrap.querySelector('[data-slot="moved"]').innerHTML = eventBlockHTML(`__child.${child.id}.moved`, '이장하였습니다', '이장 위치');
+  wrap.querySelector('[data-slot="spouse"]').innerHTML = spouseFieldsHTML(`__child.${child.id}.spouse`);
+  return wrap;
+}
+
+function refreshChildrenUI(){
+  childrenEmptyEl.style.display = state.children.length ? 'none' : 'block';
+}
+
+/* fill already-rendered inputs from a data object. stripPrefix drops N leading
+   dot-segments from data-path/data-cal-path/data-yn before resolving against obj
+   (used for dynamic cards whose paths are prefixed with "__child.<id>."). */
+function populateInputs(root, obj, stripPrefix){
+  root.querySelectorAll('input[data-path], textarea[data-path]').forEach(el=>{
+    const raw = el.getAttribute('data-path');
+    const rel = stripPrefix ? raw.split('.').slice(stripPrefix).join('.') : raw;
+    const val = getPath(obj, rel);
+    if(val !== undefined && val !== null && val !== '') el.value = val;
+  });
+  root.querySelectorAll('input[data-cal-path]').forEach(el=>{
+    const raw = el.getAttribute('data-cal-path');
+    const rel = stripPrefix ? raw.split('.').slice(stripPrefix).join('.') : raw;
+    const val = getPath(obj, rel) || 'solar';
+    el.checked = (el.value === val);
+  });
+  root.querySelectorAll('[data-yn]').forEach(toggle=>{
+    const raw = toggle.getAttribute('data-yn');
+    const rel = stripPrefix ? raw.split('.').slice(stripPrefix).join('.') : raw;
+    let on;
+    if(rel === 'hasSpouseFlag'){ on = !!obj.hasSpouse; }
+    else { const ev = getPath(obj, rel); on = !!(ev && ev.has); }
+    toggle.classList.toggle('on', on);
+    const sub = root.querySelector(`[data-subfields="${raw}"]`);
+    if(sub) sub.classList.toggle('show', on);
+  });
+}
+
+function addChild(initial){
+  const c = initial ? JSON.parse(JSON.stringify(initial)) : emptyChild('son');
+  if(!c.id) c.id = uid();
+  if(!c.gender) c.gender = 'son';
+  state.children.push(c);
+  const card = renderChildCard(c, state.children.length-1);
+  childrenListEl.appendChild(card);
+  bindDynamicCard(card, c);
+  if(initial) populateInputs(card, c, 2);
+  refreshChildrenUI();
+  renumberChildren();
+  updateDescendantParentOptions();
+}
+document.getElementById('addChildBtn').addEventListener('click', ()=> addChild());
+
+childrenListEl.addEventListener('click', (e)=>{
+  const rm = e.target.closest('[data-remove-child]');
+  if(rm){
+    const id = rm.getAttribute('data-remove-child');
+    state.children = state.children.filter(c=>c.id!==id);
+    rm.closest('.card').remove();
+    renumberChildren();
+    refreshChildrenUI();
+    updateDescendantParentOptions();
+    return;
+  }
+  const genderBtn = e.target.closest('[data-gender]');
+  if(genderBtn){
+    const card = genderBtn.closest('.card');
+    const id = card.dataset.childId;
+    const child = state.children.find(c=>c.id===id);
+    child.gender = genderBtn.getAttribute('data-gender');
+    card.querySelectorAll('[data-gender]').forEach(b=>b.classList.toggle('active', b===genderBtn));
+    card.querySelector('.card-title').textContent =
+      `자녀 ${state.children.indexOf(child)+1} · ${child.gender==='son'?'아들':'딸'}`;
+    return;
+  }
+});
+
+function renumberChildren(){
+  [...childrenListEl.children].forEach((card, i)=>{
+    const id = card.dataset.childId;
+    const child = state.children.find(c=>c.id===id);
+    card.querySelector('.card-title').textContent = `자녀 ${i+1}${child.name_kr? ' · '+child.name_kr:''}`;
+  });
+}
+
+/* generic binder for inputs inside a dynamic card, resolving __child.<id>.path against state.children */
+function bindDynamicCard(root, obj){
+  root.querySelectorAll('input[data-path], textarea[data-path]').forEach(el=>{
+    const raw = el.getAttribute('data-path');
+    const rel = raw.split('.').slice(2).join('.'); // drop "__child.<id>"
+    el.addEventListener('input', ()=>{
+      setPath(obj, rel, el.value);
+      if(rel === 'name_kr'){ renumberChildren(); updateDescendantParentOptions(); }
+    });
+  });
+  root.querySelectorAll('input[data-cal-path]').forEach(el=>{
+    const raw = el.getAttribute('data-cal-path');
+    const rel = raw.split('.').slice(2).join('.');
+    el.addEventListener('change', ()=>{ if(el.checked) setPath(obj, rel, el.value); });
+  });
+  root.querySelectorAll('[data-yn]').forEach(toggle=>{
+    const raw = toggle.getAttribute('data-yn');
+    const rel = raw.split('.').slice(2).join('.');
+    const sub = root.querySelector(`[data-subfields="${raw}"]`);
+    toggle.addEventListener('click', ()=>{
+      const on = toggle.classList.toggle('on');
+      if(rel === 'hasSpouseFlag'){ obj.hasSpouse = on; }
+      else { setPath(obj, rel + '.has', on); }
+      if(sub) sub.classList.toggle('show', on);
+    });
+  });
+}
+
+/* ---------- descendants (손주 이하) ---------- */
+const descListEl = document.getElementById('descList');
+const descEmptyEl = document.getElementById('descEmpty');
+
+function updateDescendantParentOptions(){
+  document.querySelectorAll('.desc-parent-select').forEach(sel=>{
+    const currentVal = sel.value;
+    sel.innerHTML = `<option value="">해당 자녀 선택</option>` + state.children.map(c=>
+      `<option value="${c.id}">${c.name_kr || '(이름 미입력)'} · ${c.gender==='son'?'아들':'딸'}</option>`
+    ).join('');
+    if([...sel.options].some(o=>o.value===currentVal)) sel.value = currentVal;
+  });
+}
+
+function renderDescCard(d, index){
+  const wrap = document.createElement('div');
+  wrap.className = 'card';
+  wrap.dataset.descId = d.id;
+  wrap.innerHTML = `
+    <div class="card-head">
+      <span class="card-title">후손 ${index+1}</span>
+      <button type="button" class="card-remove" data-remove-desc="${d.id}">삭제</button>
+    </div>
+    <div class="field">
+      <label>어느 자녀의 자손인가요?</label>
+      <select class="desc-parent-select" data-desc-path="${d.id}.parentRef"></select>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>세대</label>
+        <select data-desc-path="${d.id}.generation">
+          <option value="손주">손주 (1代)</option>
+          <option value="증손주">증손주 (2代)</option>
+          <option value="고손주">고손주 (3代)</option>
+        </select>
+      </div>
+      <div class="field"><label>이름</label><input type="text" data-desc-path="${d.id}.name_kr"></div>
+    </div>
+    <div class="field"><label>출생일<span class="opt">(선택, 예: 2020년생 또는 음력 2020.03.02)</span></label>
+      <input type="text" data-desc-path="${d.id}.birthText" placeholder="아는 만큼만 적어주세요">
+    </div>
+  `;
+  return wrap;
+}
+
+function addDescendant(initial){
+  const d = initial ? JSON.parse(JSON.stringify(initial)) : emptyDescendant();
+  if(!d.id) d.id = uid();
+  state.descendants.push(d);
+  const card = renderDescCard(d, state.descendants.length-1);
+  descListEl.appendChild(card);
+  updateDescendantParentOptions();
+  bindDescCard(card, d);
+  if(initial){
+    card.querySelectorAll('[data-desc-path]').forEach(el=>{
+      const rel = el.getAttribute('data-desc-path').split('.').slice(1).join('.');
+      const val = getPath(d, rel);
+      if(val !== undefined && val !== null) el.value = val;
+    });
+  }
+  refreshDescUI();
+}
+document.getElementById('addDescBtn').addEventListener('click', ()=> addDescendant());
+
+function bindDescCard(root, d){
+  root.querySelectorAll('[data-desc-path]').forEach(el=>{
+    const rel = el.getAttribute('data-desc-path').split('.').slice(1).join('.');
+    const evt = (el.tagName === 'SELECT') ? 'change' : 'input';
+    el.addEventListener(evt, ()=>{ setPath(d, rel, el.value); });
+  });
+}
+
+descListEl.addEventListener('click', (e)=>{
+  const rm = e.target.closest('[data-remove-desc]');
+  if(rm){
+    const id = rm.getAttribute('data-remove-desc');
+    state.descendants = state.descendants.filter(x=>x.id!==id);
+    rm.closest('.card').remove();
+    renumberDesc();
+    refreshDescUI();
+  }
+});
+function renumberDesc(){
+  [...descListEl.children].forEach((card,i)=>{ card.querySelector('.card-title').textContent = `후손 ${i+1}`; });
+}
+function refreshDescUI(){ descEmptyEl.style.display = state.descendants.length ? 'none' : 'block'; }
+
+/* ---------- bind static top-level inputs ---------- */
+document.querySelectorAll('form input[data-path], form textarea[data-path]').forEach(el=>{
+  el.addEventListener('input', ()=> setPath(state, el.getAttribute('data-path'), el.value));
+});
+document.querySelectorAll('form input[data-cal-path]').forEach(el=>{
+  el.addEventListener('change', ()=>{ if(el.checked) setPath(state, el.getAttribute('data-cal-path'), el.value); });
+});
+document.querySelectorAll('form [data-yn]').forEach(toggle=>{
+  const path = toggle.getAttribute('data-yn');
+  const sub = document.querySelector(`form [data-subfields="${path}"]`);
+  toggle.addEventListener('click', ()=>{
+    const on = toggle.classList.toggle('on');
+    setPath(state, path + '.has', on);
+    if(sub) sub.classList.toggle('show', on);
+  });
+});
+/* special-case: self spouse toggle id differs from data-yn convention */
+document.getElementById('self-spouse-toggle').addEventListener('click', function(){
+  const on = this.classList.toggle('on');
+  state.self.hasSpouse = on;
+  document.getElementById('self-spouse-fields').classList.toggle('show', on);
+});
+
+/* ---------- progress bar (scroll-based) ---------- */
+const sections = [...document.querySelectorAll('[data-sec]')];
+function updateProgress(){
+  const scrolled = window.scrollY;
+  const total = document.body.scrollHeight - window.innerHeight;
+  const pct = total>0 ? Math.min(100, Math.max(0,(scrolled/total)*100)) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+window.addEventListener('scroll', updateProgress, {passive:true});
+updateProgress();
+
+/* ---------- edit mode: load a prior submission via ?edit=<id> ---------- */
+let editDocId = null;
+
+function hydrateForm(data){
+  ['writer','father','mother','self'].forEach(k=>{
+    if(data[k]) Object.assign(state[k], data[k]);
+  });
+  state.parentsNote = data.parentsNote || '';
+  state.etc = data.etc || '';
+
+  populateInputs(document.getElementById('jokboForm'), state);
+
+  if(state.self.hasSpouse){
+    document.getElementById('self-spouse-toggle').classList.add('on');
+    document.getElementById('self-spouse-fields').classList.add('show');
+  }
+
+  (data.children || []).forEach(c => addChild(c));
+  (data.descendants || []).forEach(d => addDescendant(d));
+}
+
+async function initEditMode(){
+  const id = new URLSearchParams(location.search).get('edit');
+  if(!id || !window.__loadJokbo) return;
+  try{
+    const data = await window.__loadJokbo(id);
+    editDocId = id;
+    hydrateForm(data);
+    document.getElementById('submitBtn').textContent = '수정 내용 저장';
+    document.getElementById('editBanner').style.display = 'block';
+  }catch(err){
+    alert('이전에 제출하신 내용을 불러오지 못했습니다. 링크가 정확한지 확인해 주세요.');
+  }
+}
+/* module script (deferred) finishes before DOMContentLoaded, so this is safe here */
+document.addEventListener('DOMContentLoaded', initEditMode);
+
+/* ---------- submit ---------- */
+const errBox = document.getElementById('errBox');
+document.getElementById('jokboForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  errBox.classList.remove('show');
+
+  if(!state.writer.name_kr || !state.writer.phone){
+    errBox.textContent = '작성자 성명과 연락처를 입력해 주세요.';
+    errBox.classList.add('show');
+    errBox.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+  if(!state.self.name_kr){
+    errBox.textContent = '본인 정보의 이름을 입력해 주세요.';
+    errBox.classList.add('show');
+    errBox.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+  if(!document.getElementById('consentBox').checked){
+    errBox.textContent = '개인정보 수집·이용에 동의해 주셔야 제출할 수 있습니다.';
+    errBox.classList.add('show');
+    errBox.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+
+  const payload = JSON.parse(JSON.stringify(state));
+  payload.submittedAt = new Date().toISOString();
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = editDocId ? '저장 중...' : '제출 중...';
+
+  let sentOk = false;
+  let newId = null;
+  try{
+    if(editDocId && window.__updateJokbo){
+      await window.__updateJokbo(editDocId, payload);
+      sentOk = true;
+    } else if(window.__submitJokbo){
+      newId = await window.__submitJokbo(payload);
+      sentOk = true;
+    }
+    showSuccess(payload, sentOk, newId);
+  }catch(err){
+    showSuccess(payload, false, null);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = editDocId ? '수정 내용 저장' : '제출하기';
+  }
+});
+
+function showSuccess(payload, sentOk, newId){
+  const overlay = document.getElementById('overlay');
+  const title = document.getElementById('overlayTitle');
+  const desc = document.getElementById('overlayDesc');
+  const linkBox = document.getElementById('editLinkBox');
+  linkBox.style.display = 'none';
+
+  if(sentOk && newId){
+    editDocId = newId;
+    document.getElementById('submitBtn').textContent = '수정 내용 저장';
+    const url = location.origin + location.pathname + '?edit=' + newId;
+    history.replaceState(null, '', url);
+    document.getElementById('editLinkInput').value = url;
+    linkBox.style.display = 'block';
+    title.textContent = '제출이 완료되었습니다';
+    desc.textContent = '소중한 가족 정보를 남겨 주셔서 감사합니다. 추진위에서 확인 후 순차적으로 족보에 반영하겠습니다.';
+  }else if(sentOk){
+    title.textContent = '수정 내용이 저장되었습니다';
+    desc.textContent = '고쳐주신 내용이 반영되었습니다. 이후에도 같은 링크로 다시 들어오시면 언제든 고치실 수 있습니다.';
+  }else{
+    title.textContent = '작성해 주셔서 감사합니다';
+    desc.innerHTML = '아직 온라인 제출 연결이 설정되지 않아, 내용을 파일로 내려받았습니다. 이 파일을 추진위에 전달해 주세요.';
+    downloadJSON(payload);
+  }
+  overlay.classList.add('show');
+}
+function downloadJSON(payload){
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `족보조사_${(payload.self.name_kr||'응답')}_${Date.now()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+document.getElementById('overlayClose').addEventListener('click', ()=>{
+  document.getElementById('overlay').classList.remove('show');
+});
+document.getElementById('copyEditLinkBtn').addEventListener('click', async ()=>{
+  const input = document.getElementById('editLinkInput');
+  input.select();
+  try{ await navigator.clipboard.writeText(input.value); }
+  catch(e){ try{ document.execCommand('copy'); }catch(e2){} }
+  const btn = document.getElementById('copyEditLinkBtn');
+  const orig = btn.textContent;
+  btn.textContent = '복사됨';
+  setTimeout(()=>{ btn.textContent = orig; }, 1500);
+});
+</script>
+</body>
+</html>
