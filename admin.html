@@ -214,14 +214,14 @@ import {
    설정: jokbo-survey.html과 동일한 Firebase 프로젝트 설정값을 붙여넣으세요.
    ========================================================= */
 const firebaseConfig = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyBwv3aMg2wIlzhbA8uIEjZlFbSvT3_vEFU",
+  authDomain: "hong-jokbo.firebaseapp.com",
+  projectId: "hong-jokbo",
+  storageBucket: "hong-jokbo.firebasestorage.app",
+  messagingSenderId: "751397698494",
+  appId: "1:751397698494:web:d6a39244a74a78370cd7ef"
 };
-
+  
 const app = firebaseConfig.apiKey ? initializeApp(firebaseConfig) : null;
 const auth = app ? getAuth(app) : null;
 const db = app ? getFirestore(app) : null;
