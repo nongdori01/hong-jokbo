@@ -251,8 +251,8 @@
   <div class="deadline">
     <span>제출 마감: <b>2026년 10월 31일</b></span>
     <span class="contact">
-      문의: 총무 홍국녕
-      <a class="call-btn" href="tel:010-8660-7977">📞 010-8660-7977</a>
+      문의: 총무 홍길동
+      <a class="call-btn" href="tel:010-1234-5678">📞 010-1234-5678</a>
     </span>
   </div>
   <div class="edit-banner" id="editBanner" style="display:none;">
@@ -301,9 +301,17 @@
       <div class="field"><label>이름 (한글)</label><input type="text" data-path="father.name_kr"></div>
       <div class="field"><label>한자<span class="opt">(선택)</span></label><input type="text" data-path="father.name_hj"></div>
     </div>
-    <div class="field-row">
-      <div class="field"><label>계<span class="opt">(선택)</span></label><input type="text" data-path="father.gye"></div>
-      <div class="field"><label>파<span class="opt">(선택)</span></label><input type="text" data-path="father.pa"></div>
+    <div class="field">
+      <label>계<span class="opt">(선택)</span></label>
+      <select data-path="father.gye">
+        <option value="">선택 안 함</option>
+        <option value="광보계">광보계</option>
+        <option value="용상계">용상계</option>
+        <option value="상보계">상보계</option>
+        <option value="영보계">영보계</option>
+        <option value="일해계">일해계</option>
+        <option value="용채계">용채계</option>
+      </select>
     </div>
     <div id="father-death"></div>
     <div id="father-moved"></div>
@@ -492,8 +500,7 @@ function emptySpouse(){
     name_kr:"", name_hj:"", bongwan:"",
     birth:{ date: emptyDate(), place:"" },
     death: emptyEvent(true),
-    moved: emptyEvent(true),
-    fatherName:"", motherName:"", motherBongwan:""
+    moved: emptyEvent(true)
   };
 }
 function emptyChild(gender){
@@ -518,7 +525,7 @@ function emptyDescendant(){
 
 const state = {
   writer:{ name_kr:"", name_hj:"", phone:"", relationNote:"" },
-  father:{ name_kr:"", name_hj:"", gye:"", pa:"", death:emptyEvent(true), moved:emptyEvent(true) },
+  father:{ name_kr:"", name_hj:"", gye:"", death:emptyEvent(true), moved:emptyEvent(true) },
   mother:{ name_kr:"", name_hj:"", bongwan:"", death:emptyEvent(true), moved:emptyEvent(true) },
   parentsNote:"",
   self:{
@@ -584,13 +591,6 @@ function spouseFieldsHTML(pathPrefix){
     ${dateBlockHTML(pathPrefix + '.birth.date', true, '출생지')}
     ${eventBlockHTML(pathPrefix + '.death', '사망하셨습니다', '묘 위치')}
     ${eventBlockHTML(pathPrefix + '.moved', '이장하셨습니다', '이장 위치')}
-    <hr class="rule">
-    <div class="subhead">배우자의 부모님 (사돈 정보)</div>
-    <div class="field-row">
-      <div class="field"><label>부친 성명</label><input type="text" data-path="${pathPrefix}.fatherName"></div>
-      <div class="field"><label>모친 성명</label><input type="text" data-path="${pathPrefix}.motherName"></div>
-    </div>
-    <div class="field"><label>모친 본관<span class="opt">(선택)</span></label><input type="text" data-path="${pathPrefix}.motherBongwan"></div>
   `;
 }
 
@@ -650,7 +650,7 @@ function refreshChildrenUI(){
    dot-segments from data-path/data-cal-path/data-yn before resolving against obj
    (used for dynamic cards whose paths are prefixed with "__child.<id>."). */
 function populateInputs(root, obj, stripPrefix){
-  root.querySelectorAll('input[data-path], textarea[data-path]').forEach(el=>{
+  root.querySelectorAll('input[data-path], textarea[data-path], select[data-path]').forEach(el=>{
     const raw = el.getAttribute('data-path');
     const rel = stripPrefix ? raw.split('.').slice(stripPrefix).join('.') : raw;
     const val = getPath(obj, rel);
@@ -839,6 +839,9 @@ function refreshDescUI(){ descEmptyEl.style.display = state.descendants.length ?
 /* ---------- bind static top-level inputs ---------- */
 document.querySelectorAll('form input[data-path], form textarea[data-path]').forEach(el=>{
   el.addEventListener('input', ()=> setPath(state, el.getAttribute('data-path'), el.value));
+});
+document.querySelectorAll('form select[data-path]').forEach(el=>{
+  el.addEventListener('change', ()=> setPath(state, el.getAttribute('data-path'), el.value));
 });
 document.querySelectorAll('form input[data-cal-path]').forEach(el=>{
   el.addEventListener('change', ()=>{ if(el.checked) setPath(state, el.getAttribute('data-cal-path'), el.value); });
