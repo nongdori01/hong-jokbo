@@ -214,14 +214,14 @@ import {
    설정: jokbo-survey.html과 동일한 Firebase 프로젝트 설정값을 붙여넣으세요.
    ========================================================= */
 const firebaseConfig = {
-  apiKey: "AIzaSyBwv3aMg2wIlzhbA8uIEjZlFbSvT3_vEFU",
-  authDomain: "hong-jokbo.firebaseapp.com",
-  projectId: "hong-jokbo",
-  storageBucket: "hong-jokbo.firebasestorage.app",
-  messagingSenderId: "751397698494",
-  appId: "1:751397698494:web:d6a39244a74a78370cd7ef"
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
 };
-  
+
 const app = firebaseConfig.apiKey ? initializeApp(firebaseConfig) : null;
 const auth = app ? getAuth(app) : null;
 const db = app ? getFirestore(app) : null;
@@ -434,7 +434,7 @@ function openDetail(id){
   </div></div>`;
 
   html += `<div class="dgroup"><h3>父 부친</h3><div class="dgrid">
-    ${row('성명', f.name_kr)}${row('한자', f.name_hj)}${row('계', f.gye)}${row('파', f.pa)}
+    ${row('성명', f.name_kr)}${row('한자', f.name_hj)}${row('계', f.gye)}
     ${row('사망일', fD.when)}${row('묘 위치', fD.place)}${row('이장일', fM.when)}${row('이장 위치', fM.place)}
   </div></div>`;
 
@@ -455,7 +455,6 @@ function openDetail(id){
       ${row('성명', sp.name_kr)}${row('한자', sp.name_hj)}${row('본관', sp.bongwan)}
       ${row('출생일', dateText(sp.birth&&sp.birth.date))}${row('출생지', sp.birth&&sp.birth.place)}
       ${row('사망일', spD.when)}${row('묘 위치', spD.place)}${row('이장일', spM.when)}${row('이장 위치', spM.place)}
-      ${row('배우자 부친', sp.fatherName)}${row('배우자 모친', sp.motherName)}${row('배우자 모친 본관', sp.motherBongwan)}
     </div></div>`;
   }
 
