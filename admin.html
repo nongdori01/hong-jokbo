@@ -101,6 +101,44 @@
   .row-actions{white-space:nowrap;}
   .row-actions button{background:none;border:none;color:var(--seal-deep);cursor:pointer;font-size:12.5px;font-family:inherit;padding:4px 6px;}
 
+  .row-actions button.danger{color:#fff;background:var(--seal);border-radius:2px;margin-left:10px;padding:4px 10px;}
+  .row-actions button.restore{color:var(--ok);font-weight:700;}
+
+  .tabs{display:flex;gap:6px;margin-bottom:12px;}
+  .tab{
+    padding:8px 16px;border:1px solid var(--sheet-border);background:var(--paper-deep);
+    border-radius:var(--radius) var(--radius) 0 0;font-family:inherit;font-size:13.5px;
+    font-weight:700;color:var(--ink-soft);cursor:pointer;
+  }
+  .tab.active{background:var(--sheet);color:var(--ink);border-bottom-color:var(--sheet);}
+  .trash-note{
+    display:none;margin-bottom:12px;padding:10px 14px;background:#F6E2DE;border:1px solid #E3B6AC;
+    border-left:3px solid var(--seal);font-size:12.5px;border-radius:var(--radius);
+  }
+  .trash-note.show{display:block;}
+  .del-info{display:block;font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+
+  .confirm-box{max-width:420px;margin-top:80px;}
+  .confirm-box h2{font-size:18px;color:var(--seal-deep);}
+  .confirm-box p{font-size:13.5px;margin:10px 0;}
+  .confirm-box input{
+    width:100%;padding:11px 12px;font-size:15px;font-family:inherit;border:1px solid var(--sheet-border);
+    border-radius:var(--radius);background:#fff;margin:6px 0 14px;
+  }
+  .confirm-actions{display:flex;gap:8px;justify-content:flex-end;}
+  .btn.danger{background:var(--seal);color:#fff;border-color:var(--seal);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+
+  .ver-bar{
+    margin:0 0 16px;padding:10px 12px;background:var(--paper);border:1px solid var(--sheet-border);
+    border-radius:var(--radius);font-size:12.5px;
+  }
+  .ver-bar select{width:100%;margin-top:6px;padding:8px;font-family:inherit;font-size:13px;border:1px solid var(--sheet-border);border-radius:2px;background:#fff;}
+  .ver-bar .ver-note{color:var(--ink-soft);}
+  .ver-bar .ver-actions{margin-top:8px;display:none;}
+  .ver-bar .ver-actions.show{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .ver-old{font-size:12px;color:var(--seal-deep);font-weight:700;}
+
   .empty-state{padding:60px 20px;text-align:center;color:var(--ink-soft);font-size:14px;}
 
   /* ---------- detail modal ---------- */
@@ -177,6 +215,15 @@
       <button class="btn primary" id="exportBtn">엑셀로 내보내기</button>
     </div>
 
+    <div class="tabs">
+      <button class="tab active" id="tabActive">응답 목록 <span id="tabActiveCount"></span></button>
+      <button class="tab" id="tabTrash">휴지통 <span id="tabTrashCount"></span></button>
+    </div>
+    <div class="trash-note" id="trashNote">
+      휴지통의 응답은 통계·엑셀 내보내기에서 제외되며, 응답자 수정 링크는 그대로 유지됩니다.
+      <b>복원</b>하면 목록으로 돌아옵니다. 완전 삭제는 보안상 Firebase 콘솔에서만 할 수 있습니다.
+    </div>
+
     <table id="subTable">
       <thead>
         <tr>
@@ -200,6 +247,19 @@
   </div>
 </div>
 
+<!-- ============ 삭제 확인 모달 ============ -->
+<div class="modal-backdrop" id="confirmBackdrop">
+  <div class="modal confirm-box">
+    <h2>휴지통으로 이동</h2>
+    <p id="confirmDesc"></p>
+    <input type="text" id="confirmInput" autocomplete="off">
+    <div class="confirm-actions">
+      <button class="btn" id="confirmCancel">취소</button>
+      <button class="btn danger" id="confirmOk" disabled>휴지통으로 이동</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
@@ -207,7 +267,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot,
-  updateDoc, deleteDoc, serverTimestamp
+  updateDoc, getDocs, writeBatch, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 /* =========================================================
@@ -318,10 +378,16 @@ const tbody = document.getElementById('subTableBody');
 const searchInput = document.getElementById('searchInput');
 searchInput.addEventListener('input', renderTable);
 
+let view = 'active';
+const isTrashed = s => s.deleted === true;
+const activeSubs = () => allSubs.filter(s => !isTrashed(s));
+const trashSubs = () => allSubs.filter(isTrashed);
+
 function filteredSubs(){
   const kw = searchInput.value.trim();
-  if(!kw) return allSubs;
-  return allSubs.filter(s => {
+  const base = view === 'trash' ? trashSubs() : activeSubs();
+  if(!kw) return base;
+  return base.filter(s => {
     const w = s.writer || {}, se = s.self || {};
     return [w.name_kr, w.phone, se.name_kr].some(v => (v||'').includes(kw));
   });
@@ -330,19 +396,26 @@ function filteredSubs(){
 function renderTable(){
   const subs = filteredSubs();
   document.getElementById('emptyState').style.display = subs.length ? 'none' : 'block';
-  document.getElementById('emptyState').textContent = '아직 제출된 응답이 없습니다.';
+  document.getElementById('emptyState').textContent =
+    view === 'trash' ? '휴지통이 비어 있습니다.' : '아직 제출된 응답이 없습니다.';
 
-  document.getElementById('statTotal').textContent = allSubs.length;
-  document.getElementById('statPending').textContent = allSubs.filter(s => (s.status||'접수') === '접수').length;
-  document.getElementById('statDone').textContent = allSubs.filter(s => s.status === '완료').length;
-  document.getElementById('statChildren').textContent = allSubs.reduce((sum,s)=> sum + ((s.children||[]).length), 0);
+  const act = activeSubs();
+  document.getElementById('statTotal').textContent = act.length;
+  document.getElementById('statPending').textContent = act.filter(s => (s.status||'접수') === '접수').length;
+  document.getElementById('statDone').textContent = act.filter(s => s.status === '완료').length;
+  document.getElementById('statChildren').textContent = act.reduce((sum,s)=> sum + ((s.children||[]).length), 0);
+  document.getElementById('tabActiveCount').textContent = '(' + act.length + ')';
+  document.getElementById('tabTrashCount').textContent = '(' + trashSubs().length + ')';
+  document.getElementById('trashNote').classList.toggle('show', view === 'trash');
+  document.getElementById('tabActive').classList.toggle('active', view === 'active');
+  document.getElementById('tabTrash').classList.toggle('active', view === 'trash');
 
   tbody.innerHTML = subs.map(s => {
     const w = s.writer || {}, se = s.self || {};
     const status = s.status || '접수';
     return `
       <tr data-id="${s.id}">
-        <td data-label="제출일시">${fmtTs(s.submittedAt) || (s.submittedAtClient||'').slice(0,16).replace('T',' ')}</td>
+        <td data-label="제출일시">${fmtTs(s.submittedAt) || (s.submittedAtClient||'').slice(0,16).replace('T',' ')}${s.lastEditedAt ? `<span class="del-info">수정됨 · ${fmtTs(s.lastEditedAt)}</span>` : ''}</td>
         <td data-label="작성자">${escapeHtml(w.name_kr||'')}</td>
         <td data-label="본인">${escapeHtml(se.name_kr||'')}</td>
         <td data-label="연락처">${escapeHtml(w.phone||'')}</td>
@@ -357,8 +430,11 @@ function renderTable(){
         </td>
         <td class="row-actions">
           <button data-view-id="${s.id}">상세</button>
-          <button data-link-id="${s.id}">수정링크 복사</button>
-          <button data-del-id="${s.id}">삭제</button>
+          ${view === 'trash'
+            ? `<button class="restore" data-restore-id="${s.id}">복원</button>
+               <span class="del-info">${escapeHtml(s.deletedBy||'')} · ${fmtTs(s.deletedAt)}</span>`
+            : `<button data-link-id="${s.id}">수정링크 복사</button>
+               <button class="danger" data-del-id="${s.id}">휴지통</button>`}
         </td>
       </tr>`;
   }).join('');
@@ -388,10 +464,18 @@ tbody.addEventListener('click', async (e) => {
   }
 
   const delBtn = e.target.closest('[data-del-id]');
-  if (delBtn) {
-    const id = delBtn.getAttribute('data-del-id');
-    if (confirm('이 응답을 삭제하시겠습니까? 되돌릴 수 없습니다.')) {
-      await deleteDoc(doc(db, 'submissions', id));
+  if (delBtn) { askTrash(delBtn.getAttribute('data-del-id')); return; }
+
+  const restoreBtn = e.target.closest('[data-restore-id]');
+  if (restoreBtn) {
+    const id = restoreBtn.getAttribute('data-restore-id');
+    const s = allSubs.find(x => x.id === id);
+    if (s && confirm(`"${(s.self&&s.self.name_kr)||'(이름 없음)'}" 응답을 목록으로 복원할까요?`)) {
+      try {
+        await updateDoc(doc(db, 'submissions', id), {
+          deleted: false, restoredAt: serverTimestamp(), restoredBy: auth.currentUser.email || ''
+        });
+      } catch (err) { alert('복원에 실패했습니다: ' + err.message); }
     }
     return;
   }
@@ -401,6 +485,46 @@ tbody.addEventListener('click', async (e) => {
     openDetail(row.getAttribute('data-id'));
   }
 });
+
+/* ---------- 휴지통 이동 (이름 직접 입력 확인) ---------- */
+const confirmBackdrop = document.getElementById('confirmBackdrop');
+const confirmInput = document.getElementById('confirmInput');
+const confirmOk = document.getElementById('confirmOk');
+let trashTargetId = null, trashExpected = '';
+
+function askTrash(id){
+  const s = allSubs.find(x => x.id === id);
+  if (!s) return;
+  trashTargetId = id;
+  trashExpected = ((s.self && s.self.name_kr) || (s.writer && s.writer.name_kr) || '').trim() || '삭제';
+  document.getElementById('confirmDesc').innerHTML =
+    `<b>${escapeHtml(trashExpected)}</b> 응답을 휴지통으로 옮깁니다. 계속하려면 아래에 <b>${escapeHtml(trashExpected)}</b>을(를) 그대로 입력해 주세요. (휴지통에서 복원할 수 있습니다)`;
+  confirmInput.value = '';
+  confirmOk.disabled = true;
+  confirmBackdrop.classList.add('show');
+  setTimeout(() => confirmInput.focus(), 50);
+}
+confirmInput.addEventListener('input', () => {
+  confirmOk.disabled = confirmInput.value.trim() !== trashExpected;
+});
+document.getElementById('confirmCancel').addEventListener('click', () => confirmBackdrop.classList.remove('show'));
+confirmBackdrop.addEventListener('click', (e) => { if (e.target === confirmBackdrop) confirmBackdrop.classList.remove('show'); });
+confirmOk.addEventListener('click', async () => {
+  if (!trashTargetId || confirmInput.value.trim() !== trashExpected) return;
+  confirmOk.disabled = true;
+  try {
+    await updateDoc(doc(db, 'submissions', trashTargetId), {
+      deleted: true, deletedAt: serverTimestamp(), deletedBy: auth.currentUser.email || ''
+    });
+    confirmBackdrop.classList.remove('show');
+  } catch (err) {
+    alert('휴지통 이동에 실패했습니다: ' + err.message);
+    confirmOk.disabled = false;
+  }
+});
+
+document.getElementById('tabActive').addEventListener('click', () => { view = 'active'; renderTable(); });
+document.getElementById('tabTrash').addEventListener('click', () => { view = 'trash'; renderTable(); });
 
 tbody.addEventListener('change', async (e) => {
   const sel = e.target.closest('[data-status-id]');
@@ -414,23 +538,22 @@ const modalBackdrop = document.getElementById('modalBackdrop');
 document.getElementById('modalCloseBtn').addEventListener('click', () => modalBackdrop.classList.remove('show'));
 modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) modalBackdrop.classList.remove('show'); });
 
+function saeText(w){
+  if (!w || w.sae === '' || w.sae == null) return '';
+  return `${w.sae}세` + (w.ipdoSae ? ` (입도 ${w.ipdoSae}세)` : ' (입도 이전 세대)');
+}
 function row(k,v){ return v ? `<div class="k">${k}</div><div>${escapeHtml(v)}</div>` : ''; }
 
-function openDetail(id){
-  const s = allSubs.find(x => x.id === id);
-  if (!s) return;
+function buildDetailHTML(s){
   const w = s.writer||{}, f = s.father||{}, m = s.mother||{}, se = s.self||{}, sp = se.spouse||{};
   const fD = eventText(f.death), fM = eventText(f.moved);
   const mD = eventText(m.death), mM = eventText(m.moved);
   const sD = eventText(se.death), sM = eventText(se.moved);
   const spD = eventText(sp.death), spM = eventText(sp.moved);
 
-  document.getElementById('modalTitle').textContent = `${se.name_kr || '(이름 없음)'} 제출 상세`;
-  document.getElementById('modalSub').textContent = `작성자: ${w.name_kr||''} · ${fmtTs(s.submittedAt)}`;
-
   let html = '';
   html += `<div class="dgroup"><h3>작성자</h3><div class="dgrid">
-    ${row('성명', w.name_kr)}${row('한자', w.name_hj)}${row('연락처', w.phone)}${row('비고', w.relationNote)}
+    ${row('성명', w.name_kr)}${row('한자', w.name_hj)}${row('연락처', w.phone)}${row('세(世)', saeText(w))}${row('비고', w.relationNote)}
   </div></div>`;
 
   html += `<div class="dgroup"><h3>父 부친</h3><div class="dgrid">
@@ -442,6 +565,13 @@ function openDetail(id){
     ${row('성명', m.name_kr)}${row('한자', m.name_hj)}${row('본관', m.bongwan)}
     ${row('사망일', mD.when)}${row('묘 위치', mD.place)}${row('이장일', mM.when)}${row('이장 위치', mM.place)}
   </div></div>`;
+  (s.extraMothers||[]).forEach((x,i) => {
+    const xD = eventText(x.death), xM = eventText(x.moved);
+    html += `<div class="dgroup"><h3>母 모친 추가 ${i+1}${x.kind ? ' · ' + escapeHtml(x.kind) : ''}</h3><div class="dgrid">
+      ${row('성명', x.name_kr)}${row('한자', x.name_hj)}${row('본관', x.bongwan)}
+      ${row('사망일', xD.when)}${row('묘 위치', xD.place)}${row('이장일', xM.when)}${row('이장 위치', xM.place)}
+    </div></div>`;
+  });
   if (s.parentsNote) html += `<div class="dgroup"><div class="dgrid"><div class="full k">부모님 기타사항</div><div class="full">${escapeHtml(s.parentsNote)}</div></div></div>`;
 
   html += `<div class="dgroup"><h3>子 본인</h3><div class="dgrid">
@@ -457,6 +587,15 @@ function openDetail(id){
       ${row('사망일', spD.when)}${row('묘 위치', spD.place)}${row('이장일', spM.when)}${row('이장 위치', spM.place)}
     </div></div>`;
   }
+
+  (s.extraSpouses||[]).forEach((x,i) => {
+    const xD = eventText(x.death), xM = eventText(x.moved);
+    html += `<div class="dgroup"><h3>배우자 추가 ${i+1}${x.kind ? ' · ' + escapeHtml(x.kind) : ''}</h3><div class="dgrid">
+      ${row('성명', x.name_kr)}${row('한자', x.name_hj)}${row('본관', x.bongwan)}
+      ${row('출생일', dateText(x.birth&&x.birth.date))}${row('출생지', x.birth&&x.birth.place)}
+      ${row('사망일', xD.when)}${row('묘 위치', xD.place)}${row('이장일', xM.when)}${row('이장 위치', xM.place)}
+    </div></div>`;
+  });
 
   const children = s.children || [];
   if (children.length) {
@@ -483,8 +622,91 @@ function openDetail(id){
 
   if (s.etc) html += `<hr class="rule"><div class="dgrid"><div class="full k">기타사항</div><div class="full">${escapeHtml(s.etc)}</div></div>`;
 
-  document.getElementById('modalBody').innerHTML = html;
+  return html;
+}
+
+/* ---------- 상세 + 수정 이력 ---------- */
+const CONTENT_KEYS = ['writer','father','mother','extraMothers','parentsNote','self','extraSpouses','children','descendants','etc'];
+const pickContent = (src) => { const o = {}; CONTENT_KEYS.forEach(k => { if (src[k] !== undefined) o[k] = src[k]; }); return o; };
+
+function openDetail(id){
+  const s = allSubs.find(x => x.id === id);
+  if (!s) return;
+  const w = s.writer||{}, se = s.self||{};
+  document.getElementById('modalTitle').textContent = `${se.name_kr || '(이름 없음)'} 제출 상세`;
+  document.getElementById('modalSub').textContent = `작성자: ${w.name_kr||''} · ${fmtTs(s.submittedAt)}`;
+  document.getElementById('modalBody').innerHTML =
+    `<div class="ver-bar" id="verBar"><span class="ver-note">수정 이력을 불러오는 중...</span></div>
+     <div id="verBody">${buildDetailHTML(s)}</div>`;
   modalBackdrop.classList.add('show');
+  loadHistory(id);
+}
+
+async function loadHistory(id){
+  const bar = document.getElementById('verBar');
+  try {
+    const snap = await getDocs(query(collection(db, 'submissions', id, 'history'), orderBy('savedAt', 'desc')));
+    const versions = snap.docs.map(d => ({ hid: d.id, ...d.data() }));   // 최신순
+    if (!versions.length) {
+      bar.innerHTML = '<span class="ver-note">수정 이력 없음 · 최초 제출 그대로입니다.</span>';
+      return;
+    }
+    const n = versions.length;
+    const cur = allSubs.find(x => x.id === id);
+    const opts = [`<option value="cur">버전 ${n+1} · 최신 (현재 저장된 내용)${cur && cur.lastEditedAt ? ' · ' + fmtTs(cur.lastEditedAt) : ''}</option>`]
+      .concat(versions.map((v, i) =>
+        `<option value="${v.hid}">버전 ${n - i} · ${fmtTs(v.savedAt)} 에 수정되기 전 내용 (${escapeHtml(v.savedBy || '')})</option>`));
+    bar.innerHTML = `
+      <b>수정 이력 ${n}건</b> — 보고 싶은 버전을 선택하세요.
+      <select id="verSelect">${opts.join('')}</select>
+      <div class="ver-actions" id="verActions">
+        <span class="ver-old">※ 이전 버전을 보고 있습니다.</span>
+        <button class="btn" id="verRestoreBtn" type="button">이 버전으로 복원</button>
+      </div>`;
+    const sel = document.getElementById('verSelect');
+    const actions = document.getElementById('verActions');
+    sel.addEventListener('change', () => {
+      const body = document.getElementById('verBody');
+      if (sel.value === 'cur') {
+        body.innerHTML = buildDetailHTML(allSubs.find(x => x.id === id) || {});
+        actions.classList.remove('show');
+      } else {
+        const v = versions.find(x => x.hid === sel.value);
+        body.innerHTML = buildDetailHTML(v.snapshot || {});
+        actions.classList.add('show');
+      }
+    });
+    document.getElementById('verRestoreBtn').addEventListener('click', () => {
+      const v = versions.find(x => x.hid === sel.value);
+      if (v) restoreVersion(id, v);
+    });
+  } catch (err) {
+    console.error(err);
+    bar.innerHTML = '<span class="ver-note">수정 이력을 불러오지 못했습니다: ' + escapeHtml(err.message) + '</span>';
+  }
+}
+
+async function restoreVersion(id, v){
+  if (!confirm('선택한 이전 버전의 내용으로 되돌립니다.\n지금 저장된 최신 내용도 이력에 보관되므로 언제든 다시 돌아올 수 있습니다. 진행할까요?')) return;
+  try {
+    const ref = doc(db, 'submissions', id);
+    const curSnap = await getDoc(ref);
+    if (!curSnap.exists()) throw new Error('원본 응답을 찾을 수 없습니다.');
+    const email = (auth.currentUser && auth.currentUser.email) || '';
+    const batch = writeBatch(db);
+    batch.set(doc(collection(ref, 'history')), {
+      snapshot: pickContent(curSnap.data()), savedAt: serverTimestamp(), savedBy: email + ' (복원 전 내용)'
+    });
+    batch.update(ref, {
+      ...pickContent(v.snapshot || {}),
+      lastEditedAt: serverTimestamp(), lastEditedAtClient: new Date().toISOString()
+    });
+    await batch.commit();
+    modalBackdrop.classList.remove('show');
+    alert('선택한 버전으로 복원했습니다.');
+  } catch (err) {
+    alert('복원에 실패했습니다: ' + err.message);
+  }
 }
 
 /* ---------- excel export ---------- */
@@ -492,18 +714,21 @@ document.getElementById('exportBtn').addEventListener('click', () => {
   const subs = filteredSubs();
   if (!subs.length) { alert('내보낼 데이터가 없습니다.'); return; }
 
-  const mainHeader = ['제출ID','제출일시','상태','작성자_성명','작성자_연락처',
+  const mainHeader = ['제출ID','제출일시','상태','작성자_성명','작성자_연락처','작성자_세','작성자_입도세',
     '부친_성명','부친_사망일','부친_묘위치','모친_성명','모친_사망일','모친_묘위치',
     '본인_성명','본인_출생일','본인_출생지','본인_사망일',
-    '배우자_유무','배우자_성명','자녀수','후손수'];
+    '배우자_유무','배우자_성명','추가모친','추가배우자','자녀수','후손수'];
   const mainRows = subs.map(s => {
     const w=s.writer||{}, f=s.father||{}, m=s.mother||{}, se=s.self||{}, sp=se.spouse||{};
     const fD=eventText(f.death), mD=eventText(m.death), sD=eventText(se.death);
     return [
-      s.id, fmtTs(s.submittedAt), s.status||'접수', w.name_kr||'', w.phone||'',
+      s.id, fmtTs(s.submittedAt), s.status||'접수', w.name_kr||'', w.phone||'', w.sae||'', w.ipdoSae||'',
       f.name_kr||'', fD.when, fD.place, m.name_kr||'', mD.when, mD.place,
       se.name_kr||'', dateText(se.birth&&se.birth.date), (se.birth&&se.birth.place)||'', sD.when,
-      se.hasSpouse?'있음':'없음', sp.name_kr||'', (s.children||[]).length, (s.descendants||[]).length
+      se.hasSpouse?'있음':'없음', sp.name_kr||'',
+      (s.extraMothers||[]).map(x=>(x.name_kr||'')+(x.kind?`(${x.kind})`:'')).join(', '),
+      (s.extraSpouses||[]).map(x=>(x.name_kr||'')+(x.kind?`(${x.kind})`:'')).join(', '),
+      (s.children||[]).length, (s.descendants||[]).length
     ];
   });
 

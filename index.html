@@ -117,6 +117,11 @@
     outline:2px solid var(--seal-deep);outline-offset:1px;border-color:var(--seal-deep);
   }
   textarea{min-height:70px;resize:vertical;}
+  .auto-box{
+    padding:11px 12px;font-size:15px;border:1px dashed var(--sheet-border);border-radius:var(--radius);
+    background:var(--paper);color:var(--ink-soft);min-height:44px;
+  }
+  .auto-box.has{color:var(--seal-deep);font-weight:700;border-style:solid;}
 
   /* date block: 음/양 + 년월일 */
   .datewrap{
@@ -222,6 +227,17 @@
     padding:9px 14px;border:1px solid var(--ink);background:#fff;color:var(--ink);
     border-radius:var(--radius);font-family:inherit;font-size:12.5px;cursor:pointer;
   }
+  .edit-warn{
+    margin-top:10px;padding:10px 12px;background:#F6E2DE;border:1px solid #E3B6AC;border-left:3px solid var(--seal);
+    border-radius:var(--radius);font-size:12.5px;color:var(--seal-deep);line-height:1.55;
+  }
+  .overlay-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+  .overlay-box button.sub{background:#fff;color:var(--ink);border:1px solid var(--ink);}
+  .hero .edit-banner .edit-banner-warn{display:inline-block;margin-top:6px;color:var(--seal-deep);font-size:12.5px;}
+  .hero .edit-banner .banner-btn{
+    margin-top:8px;padding:7px 12px;border:1px solid var(--ink);background:#fff;color:var(--ink);
+    border-radius:var(--radius);font-family:inherit;font-size:12.5px;cursor:pointer;
+  }
   .err-box{
     display:none;background:#F6E2DE;border:1px solid var(--seal);color:var(--seal-deep);
     padding:12px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:14px;
@@ -251,13 +267,11 @@
   <div class="deadline">
     <span>제출 마감: <b>2026년 10월 31일</b></span>
     <span class="contact">
-      문의: 총무 홍국녕
-      <a class="call-btn" href="tel:010-8660-7977">📞 010-8660-7977</a>
+      문의: 총무 홍길동
+      <a class="call-btn" href="tel:010-1234-5678">📞 010-1234-5678</a>
     </span>
   </div>
-  <div class="edit-banner" id="editBanner" style="display:none;">
-    이전에 제출하신 내용을 불러왔습니다. 확인 후 필요한 부분을 수정하고 다시 저장해 주세요.
-  </div>
+  <div class="edit-banner" id="editBanner" style="display:none;"></div>
   <div class="prior-note">이미 제출하셨나요? 제출 후 안내된 <b>확인·수정 링크</b>로 다시 들어오시면 내용을 고칠 수 있습니다. 링크를 잃어버리셨다면 위 연락처로 문의해 주세요.</div>
 </div>
 
@@ -283,6 +297,16 @@
     <div class="field">
       <label>연락처<span class="req">*</span></label>
       <input type="tel" required data-path="writer.phone" placeholder="010-0000-0000">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>세(世)</label>
+        <input type="number" id="writerSae" min="1" max="200" inputmode="numeric" data-path="writer.sae" placeholder="예: 32">
+      </div>
+      <div class="field">
+        <label>입도세(入島世)<span class="opt">(자동 계산)</span></label>
+        <div class="auto-box" id="ipdoDisplay">세(世)를 입력하면 자동 계산됩니다</div>
+      </div>
     </div>
     <div class="field">
       <label>본인과의 관계 / 참고사항<span class="opt">(선택)</span></label>
@@ -334,6 +358,9 @@
     </div>
     <div id="mother-death"></div>
     <div id="mother-moved"></div>
+    <hr class="rule">
+    <div id="extraMothersList"></div>
+    <button type="button" class="add-btn" id="addMotherBtn">+ 모친 추가 (계모·양모 등)</button>
     <hr class="rule">
     <div class="field">
       <label>부모님 관련 기타사항<span class="opt">(선택)</span></label>
@@ -423,8 +450,31 @@
         <input type="text" id="editLinkInput" readonly>
         <button type="button" id="copyEditLinkBtn">복사</button>
       </div>
+      <div class="edit-warn">
+        ⚠ 이 링크를 아는 사람은 누구나 제출 내용을 바꿀 수 있습니다.
+        다른 분께 전달하거나 단체방에 올리지 말고 <b>본인만 보관</b>해 주세요.
+        다른 가족분은 이 링크가 아니라 기본 설문 주소로 각자 새로 작성해야 합니다.
+      </div>
     </div>
-    <button type="button" id="overlayClose">닫기</button>
+    <div class="overlay-actions">
+      <button type="button" class="sub" id="newResponseOverlayBtn">다른 사람 정보 새로 작성</button>
+      <button type="button" id="overlayClose">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="editConfirmOverlay">
+  <div class="overlay-box">
+    <h2 id="editConfirmTitle">이미 작성된 자료가 있습니다</h2>
+    <p id="editConfirmText"></p>
+    <div class="edit-warn" style="margin-bottom:18px;">
+      ‘수정’을 누르면 기존 응답이 새 내용으로 바뀝니다. (이전 내용은 이력으로 보관됩니다.)
+      다른 분의 정보를 입력하려는 것이라면 ‘아니오, 새로 작성’을 눌러 주세요.
+    </div>
+    <div class="overlay-actions">
+      <button type="button" class="sub" id="editConfirmNo">아니오, 새로 작성</button>
+      <button type="button" id="editConfirmYes">예, 수정하기</button>
+    </div>
   </div>
 </div>
 
@@ -437,7 +487,7 @@
    ========================================================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-  getFirestore, collection, doc, addDoc, updateDoc, getDoc, serverTimestamp
+  getFirestore, collection, doc, addDoc, getDoc, writeBatch, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -474,14 +524,32 @@ window.__loadJokbo = async function (id) {
   return snap.data();
 };
 
+const CONTENT_KEYS = ["writer","father","mother","extraMothers","parentsNote","self","extraSpouses","children","descendants","etc"];
+const pickContent = (src) => {
+  const out = {};
+  CONTENT_KEYS.forEach(k => { if (src[k] !== undefined) out[k] = src[k]; });
+  return out;
+};
+
+/* 수정 시: 수정 직전의 내용을 history 하위 컬렉션에 보관한 뒤(같은 배치로 원자적 처리) 본문을 갱신 */
 window.__updateJokbo = async function (id, payload) {
   if (!__db) throw new Error("firebase-not-configured");
-  const { submittedAt, submittedAtClient, status, ...rest } = payload;
-  await updateDoc(doc(__db, "submissions", id), {
-    ...rest,
+  const ref = doc(__db, "submissions", id);
+  const cur = await getDoc(ref);
+  if (!cur.exists()) throw new Error("not-found");
+
+  const batch = writeBatch(__db);
+  batch.set(doc(collection(ref, "history")), {
+    snapshot: pickContent(cur.data()),
+    savedAt: serverTimestamp(),
+    savedBy: "응답자"
+  });
+  batch.update(ref, {
+    ...pickContent(payload),
     lastEditedAt: serverTimestamp(),
     lastEditedAtClient: new Date().toISOString()
   });
+  await batch.commit();
   return id;
 };
 
@@ -502,6 +570,12 @@ function emptySpouse(){
     death: emptyEvent(true),
     moved: emptyEvent(true)
   };
+}
+function emptyExtraMother(){
+  return { id: uid(), kind:"", name_kr:"", name_hj:"", bongwan:"", death: emptyEvent(true), moved: emptyEvent(true) };
+}
+function emptyExtraSpouse(){
+  return Object.assign({ id: uid(), kind:"" }, emptySpouse());
 }
 function emptyChild(gender){
   return {
@@ -524,9 +598,10 @@ function emptyDescendant(){
 }
 
 const state = {
-  writer:{ name_kr:"", name_hj:"", phone:"", relationNote:"" },
+  writer:{ name_kr:"", name_hj:"", phone:"", sae:"", ipdoSae:"", relationNote:"" },
   father:{ name_kr:"", name_hj:"", gye:"", death:emptyEvent(true), moved:emptyEvent(true) },
   mother:{ name_kr:"", name_hj:"", bongwan:"", death:emptyEvent(true), moved:emptyEvent(true) },
+  extraMothers:[],
   parentsNote:"",
   self:{
     name_kr:"", name_hj:"",
@@ -536,6 +611,7 @@ const state = {
     hasSpouse:false,
     spouse: emptySpouse()
   },
+  extraSpouses:[],
   children:[],
   descendants:[],
   etc:""
@@ -602,7 +678,9 @@ document.getElementById('mother-moved').innerHTML = eventBlockHTML('mother.moved
 document.getElementById('self-birth').innerHTML = dateBlockHTML('self.birth.date', true, '출생지');
 document.getElementById('self-death').innerHTML = eventBlockHTML('self.death','사망하셨습니다','묘 위치');
 document.getElementById('self-moved').innerHTML = eventBlockHTML('self.moved','이장하셨습니다','이장 위치');
-document.getElementById('self-spouse-fields').innerHTML = spouseFieldsHTML('self.spouse');
+document.getElementById('self-spouse-fields').innerHTML = spouseFieldsHTML('self.spouse') +
+  `<hr class="rule"><div id="extraSpousesList"></div>
+   <button type="button" class="add-btn" id="addSpouseBtn">+ 배우자 추가 (재혼 등)</button>`;
 
 /* ---------- children ---------- */
 const childrenListEl = document.getElementById('childrenList');
@@ -681,7 +759,7 @@ function addChild(initial){
   state.children.push(c);
   const card = renderChildCard(c, state.children.length-1);
   childrenListEl.appendChild(card);
-  bindDynamicCard(card, c);
+  bindDynamicCard(card, c, ()=>{ renumberChildren(); updateDescendantParentOptions(); });
   if(initial) populateInputs(card, c, 2);
   refreshChildrenUI();
   renumberChildren();
@@ -722,14 +800,19 @@ function renumberChildren(){
 }
 
 /* generic binder for inputs inside a dynamic card, resolving __child.<id>.path against state.children */
-function bindDynamicCard(root, obj){
+function bindDynamicCard(root, obj, onName){
   root.querySelectorAll('input[data-path], textarea[data-path]').forEach(el=>{
     const raw = el.getAttribute('data-path');
-    const rel = raw.split('.').slice(2).join('.'); // drop "__child.<id>"
+    const rel = raw.split('.').slice(2).join('.'); // drop "__child.<id>" / "__x.<id>"
     el.addEventListener('input', ()=>{
       setPath(obj, rel, el.value);
-      if(rel === 'name_kr'){ renumberChildren(); updateDescendantParentOptions(); }
+      if(rel === 'name_kr' && onName) onName();
     });
+  });
+  root.querySelectorAll('select[data-path]').forEach(el=>{
+    const raw = el.getAttribute('data-path');
+    const rel = raw.split('.').slice(2).join('.');
+    el.addEventListener('change', ()=> setPath(obj, rel, el.value));
   });
   root.querySelectorAll('input[data-cal-path]').forEach(el=>{
     const raw = el.getAttribute('data-cal-path');
@@ -748,6 +831,80 @@ function bindDynamicCard(root, obj){
     });
   });
 }
+
+/* ---------- 추가 모친 / 추가 배우자 (계모·재혼 등) ---------- */
+const extraCfg = {
+  mother:{ list:'extraMothers', mountId:'extraMothersList', make:emptyExtraMother, title:'모친 추가',
+           kinds:['생모','계모','양모','기타'] },
+  spouse:{ list:'extraSpouses', mountId:'extraSpousesList', make:emptyExtraSpouse, title:'배우자 추가',
+           kinds:['재혼 배우자','전 배우자(사별·이혼)','기타'] }
+};
+
+function renderExtraCard(type, item, index){
+  const cfg = extraCfg[type];
+  const p = `__x.${item.id}`;
+  const wrap = document.createElement('div');
+  wrap.className = 'card';
+  wrap.dataset.extraId = item.id;
+  wrap.dataset.extraType = type;
+  const kindOpts = ['<option value="">선택 안 함</option>']
+    .concat(cfg.kinds.map(k=>`<option value="${k}">${k}</option>`)).join('');
+  const body = type === 'mother'
+    ? `<div class="field-row">
+         <div class="field"><label>이름 (한글)</label><input type="text" data-path="${p}.name_kr"></div>
+         <div class="field"><label>한자<span class="opt">(선택)</span></label><input type="text" data-path="${p}.name_hj"></div>
+       </div>
+       <div class="field"><label>본관<span class="opt">(선택)</span></label><input type="text" data-path="${p}.bongwan" placeholder="예: 김해 김씨"></div>
+       ${eventBlockHTML(p + '.death', '사망하셨습니다', '묘 위치')}
+       ${eventBlockHTML(p + '.moved', '이장하셨습니다', '이장 위치')}`
+    : spouseFieldsHTML(p);
+  wrap.innerHTML = `
+    <div class="card-head">
+      <span class="card-title">${cfg.title} ${index+1}</span>
+      <button type="button" class="card-remove" data-remove-extra="${item.id}">삭제</button>
+    </div>
+    <div class="field"><label>구분<span class="opt">(선택)</span></label>
+      <select data-path="${p}.kind">${kindOpts}</select>
+    </div>
+    ${body}`;
+  return wrap;
+}
+
+function renumberExtra(type){
+  const cfg = extraCfg[type];
+  const mount = document.getElementById(cfg.mountId);
+  [...mount.children].forEach((card, i)=>{
+    const item = state[cfg.list].find(x=>x.id===card.dataset.extraId);
+    card.querySelector('.card-title').textContent =
+      `${cfg.title} ${i+1}${item && item.name_kr ? ' · '+item.name_kr : ''}`;
+  });
+}
+
+function addExtra(type, initial){
+  const cfg = extraCfg[type];
+  const item = initial ? JSON.parse(JSON.stringify(initial)) : cfg.make();
+  if(!item.id) item.id = uid();
+  state[cfg.list].push(item);
+  const card = renderExtraCard(type, item, state[cfg.list].length-1);
+  document.getElementById(cfg.mountId).appendChild(card);
+  bindDynamicCard(card, item, ()=> renumberExtra(type));
+  if(initial) populateInputs(card, item, 2);
+  renumberExtra(type);
+}
+document.getElementById('addMotherBtn').addEventListener('click', ()=> addExtra('mother'));
+document.getElementById('addSpouseBtn').addEventListener('click', ()=> addExtra('spouse'));
+
+['mother','spouse'].forEach(type=>{
+  const cfg = extraCfg[type];
+  document.getElementById(cfg.mountId).addEventListener('click', (e)=>{
+    const rm = e.target.closest('[data-remove-extra]');
+    if(!rm) return;
+    const id = rm.getAttribute('data-remove-extra');
+    state[cfg.list] = state[cfg.list].filter(x=>x.id!==id);
+    rm.closest('.card').remove();
+    renumberExtra(type);
+  });
+});
 
 /* ---------- descendants (손주 이하) ---------- */
 const descListEl = document.getElementById('descList');
@@ -862,6 +1019,30 @@ document.getElementById('self-spouse-toggle').addEventListener('click', function
   document.getElementById('self-spouse-fields').classList.toggle('show', on);
 });
 
+/* ---------- 세(世) -> 입도세(入島世) 자동 계산 (입도세 = 세 - 14) ---------- */
+const IPDO_OFFSET = 14;
+function updateIpdo(){
+  const box = document.getElementById('ipdoDisplay');
+  const sae = parseInt(document.getElementById('writerSae').value, 10);
+  if(isNaN(sae) || sae < 1){
+    state.writer.ipdoSae = "";
+    box.textContent = '세(世)를 입력하면 자동 계산됩니다';
+    box.classList.remove('has');
+    return;
+  }
+  const ipdo = sae - IPDO_OFFSET;
+  if(ipdo < 1){
+    state.writer.ipdoSae = "";
+    box.textContent = `${sae}세 (입도 이전 세대)`;
+    box.classList.remove('has');
+  } else {
+    state.writer.ipdoSae = String(ipdo);
+    box.textContent = `${sae}세 (입도 ${ipdo}세)`;
+    box.classList.add('has');
+  }
+}
+document.getElementById('writerSae').addEventListener('input', updateIpdo);
+
 /* ---------- progress bar (scroll-based) ---------- */
 const sections = [...document.querySelectorAll('[data-sec]')];
 function updateProgress(){
@@ -884,8 +1065,17 @@ function hydrateForm(data){
   state.etc = data.etc || '';
 
   populateInputs(document.getElementById('jokboForm'), state);
+  updateIpdo();
 
   if(state.self.hasSpouse){
+    document.getElementById('self-spouse-toggle').classList.add('on');
+    document.getElementById('self-spouse-fields').classList.add('show');
+  }
+
+  (data.extraMothers || []).forEach(m => addExtra('mother', m));
+  (data.extraSpouses || []).forEach(sp => addExtra('spouse', sp));
+  if(state.extraSpouses.length && !state.self.hasSpouse){
+    state.self.hasSpouse = true;
     document.getElementById('self-spouse-toggle').classList.add('on');
     document.getElementById('self-spouse-fields').classList.add('show');
   }
@@ -894,18 +1084,61 @@ function hydrateForm(data){
   (data.descendants || []).forEach(d => addDescendant(d));
 }
 
+function esc(str){
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+/* 홍길동 -> 홍*동, 홍길 -> 홍*, 남궁민수 -> 남**수 */
+function maskName(n){
+  const ch = [...String(n||'').trim()];
+  if(ch.length <= 1) return ch.join('');
+  if(ch.length === 2) return ch[0] + '*';
+  return ch[0] + '*'.repeat(ch.length-2) + ch[ch.length-1];
+}
+let loadedSelfName = '';
+
+function showEditBanner(name){
+  const b = document.getElementById('editBanner');
+  const who = name ? esc(maskName(name)) + '님' : '이전 제출자';
+  b.innerHTML = `<b>${who}</b>의 응답을 수정 중입니다. 확인 후 필요한 부분을 고쳐 저장해 주세요.<br>
+    <span class="edit-banner-warn">⚠ 이 페이지 주소를 다른 분께 전달하면 그분이 내용을 바꿀 수 있습니다. 다른 가족분은 기본 설문 주소로 각자 새로 작성해 주세요.</span><br>
+    <button type="button" class="banner-btn" id="newResponseBtn">+ 다른 사람 정보를 새로 작성하기</button>`;
+  b.style.display = 'block';
+  document.getElementById('newResponseBtn').addEventListener('click', ()=>{
+    if(confirm('현재 화면의 내용을 지우고 새 응답을 작성합니다. (이미 저장된 응답은 그대로 유지됩니다) 계속할까요?')){
+      location.href = location.pathname;
+    }
+  });
+}
+
 async function initEditMode(){
   const id = new URLSearchParams(location.search).get('edit');
   if(!id || !window.__loadJokbo) return;
+  let data;
   try{
-    const data = await window.__loadJokbo(id);
-    editDocId = id;
-    hydrateForm(data);
-    document.getElementById('submitBtn').textContent = '수정 내용 저장';
-    document.getElementById('editBanner').style.display = 'block';
+    data = await window.__loadJokbo(id);
   }catch(err){
     alert('이전에 제출하신 내용을 불러오지 못했습니다. 링크가 정확한지 확인해 주세요.');
+    return;
   }
+  const name = (data.self && data.self.name_kr) || (data.writer && data.writer.name_kr) || '';
+  document.getElementById('editConfirmText').textContent =
+    (name ? maskName(name) + '님의' : '이전에 제출된') + ' 자료가 작성되어 있습니다. 수정하시겠습니까?';
+  const ov = document.getElementById('editConfirmOverlay');
+  ov.classList.add('show');
+
+  document.getElementById('editConfirmYes').onclick = ()=>{
+    ov.classList.remove('show');
+    editDocId = id;
+    hydrateForm(data);
+    loadedSelfName = state.self.name_kr || '';
+    document.getElementById('submitBtn').textContent = '수정 내용 저장';
+    showEditBanner(name);
+  };
+  document.getElementById('editConfirmNo').onclick = ()=>{
+    ov.classList.remove('show');
+    editDocId = null;
+    history.replaceState(null, '', location.pathname);
+  };
 }
 /* module script (deferred) finishes before DOMContentLoaded, so this is safe here */
 document.addEventListener('DOMContentLoaded', initEditMode);
@@ -935,6 +1168,16 @@ document.getElementById('jokboForm').addEventListener('submit', async (e)=>{
     return;
   }
 
+  if(editDocId && loadedSelfName && (state.self.name_kr||'').trim() !== loadedSelfName.trim()){
+    const ok = confirm(
+      `본인 성명이 "${loadedSelfName}"에서 "${state.self.name_kr}"(으)로 바뀌었습니다.\n\n` +
+      `같은 분의 이름을 정정하는 경우라면 [확인]을 눌러 저장하세요.\n` +
+      `다른 분의 정보를 입력하신 거라면 [취소]를 누르고, 화면 위쪽의 "다른 사람 정보를 새로 작성하기"를 이용해 주세요. ` +
+      `(그대로 저장하면 기존 응답이 바뀝니다)`
+    );
+    if(!ok) return;
+  }
+
   const payload = JSON.parse(JSON.stringify(state));
   payload.submittedAt = new Date().toISOString();
 
@@ -947,6 +1190,7 @@ document.getElementById('jokboForm').addEventListener('submit', async (e)=>{
   try{
     if(editDocId && window.__updateJokbo){
       await window.__updateJokbo(editDocId, payload);
+      loadedSelfName = state.self.name_kr || '';
       sentOk = true;
     } else if(window.__submitJokbo){
       newId = await window.__submitJokbo(payload);
@@ -970,10 +1214,12 @@ function showSuccess(payload, sentOk, newId){
 
   if(sentOk && newId){
     editDocId = newId;
+    loadedSelfName = state.self.name_kr || '';
     document.getElementById('submitBtn').textContent = '수정 내용 저장';
     const url = location.origin + location.pathname + '?edit=' + newId;
-    history.replaceState(null, '', url);
+    /* 주소창은 바꾸지 않음: 주소를 복사해 공유하다가 남이 덮어쓰는 사고 방지 */
     document.getElementById('editLinkInput').value = url;
+    showEditBanner(state.self.name_kr || '');
     linkBox.style.display = 'block';
     title.textContent = '제출이 완료되었습니다';
     desc.textContent = '소중한 가족 정보를 남겨 주셔서 감사합니다. 추진위에서 확인 후 순차적으로 족보에 반영하겠습니다.';
@@ -996,6 +1242,9 @@ function downloadJSON(payload){
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
+document.getElementById('newResponseOverlayBtn').addEventListener('click', ()=>{
+  location.href = location.pathname;
+});
 document.getElementById('overlayClose').addEventListener('click', ()=>{
   document.getElementById('overlay').classList.remove('show');
 });
