@@ -231,6 +231,7 @@
     margin-top:10px;padding:10px 12px;background:#F6E2DE;border:1px solid #E3B6AC;border-left:3px solid var(--seal);
     border-radius:var(--radius);font-size:12.5px;color:var(--seal-deep);line-height:1.55;
   }
+  .overlay-box p.confirm-sub{font-size:13px;color:var(--ink);margin:0 0 20px;}
   .overlay-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
   .overlay-box button.sub{background:#fff;color:var(--ink);border:1px solid var(--ink);}
   .hero .edit-banner .edit-banner-warn{display:inline-block;margin-top:6px;color:var(--seal-deep);font-size:12.5px;}
@@ -267,8 +268,8 @@
   <div class="deadline">
     <span>제출 마감: <b>2026년 10월 31일</b></span>
     <span class="contact">
-      문의: 총무 홍국녕
-      <a class="call-btn" href="tel:010-8660-7977">📞 010-8660-7977</a>
+      문의: 총무 홍길동
+      <a class="call-btn" href="tel:010-1234-5678">📞 010-1234-5678</a>
     </span>
   </div>
   <div class="edit-banner" id="editBanner" style="display:none;"></div>
@@ -467,15 +468,10 @@
   <div class="overlay-box">
     <h2 id="editConfirmTitle">이미 작성된 자료가 있습니다</h2>
     <p id="editConfirmText"></p>
-    <div class="edit-warn" style="margin-bottom:18px;background:#EAF0E9;border-color:#B9CDB8;border-left-color:var(--ok);color:var(--ink);">
-      ‘예’를 누르면 <b>기존에 작성하신 내용이 그대로 불러와집니다.</b>
-      자녀·후손 등 항목을 추가하거나 삭제하고, 내용을 고친 뒤 저장해 주세요.
-      (수정 전 내용은 관리자에게 이력으로만 남고, 화면에는 보이지 않습니다.)<br>
-      <span style="color:var(--seal-deep);">다른 분의 정보를 새로 입력하려는 경우에만 ‘아니오, 새로 작성’을 눌러 주세요.</span>
-    </div>
+    <p class="confirm-sub">기존에 작성하신 내용이 그대로 불러와집니다.<br>필요한 부분을 고친 뒤 저장해 주세요.</p>
     <div class="overlay-actions">
+      <button type="button" id="editConfirmYes">예, 수정하기</button>
       <button type="button" class="sub" id="editConfirmNo">아니오, 새로 작성</button>
-      <button type="button" id="editConfirmYes">예, 기존 내용 불러와 수정</button>
     </div>
   </div>
 </div>
