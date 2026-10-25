@@ -268,8 +268,8 @@
   <div class="deadline">
     <span>제출 마감: <b>2026년 10월 31일</b></span>
     <span class="contact">
-      문의: 총무 홍국녕
-      <a class="call-btn" href="tel:010-8660-7977">📞 010-8660-7977</a>
+      문의: 총무 홍길동
+      <a class="call-btn" href="tel:010-1234-5678">📞 010-1234-5678</a>
     </span>
   </div>
   <div class="edit-banner" id="editBanner" style="display:none;"></div>
@@ -338,6 +338,7 @@
         <option value="용채계">용채계</option>
       </select>
     </div>
+    <div id="father-birth"></div>
     <div id="father-death"></div>
     <div id="father-moved"></div>
   </div>
@@ -357,6 +358,7 @@
       <label>본관<span class="opt">(선택)</span></label>
       <input type="text" data-path="mother.bongwan" placeholder="예: 김해 김씨">
     </div>
+    <div id="mother-birth"></div>
     <div id="mother-death"></div>
     <div id="mother-moved"></div>
     <hr class="rule">
@@ -570,7 +572,7 @@ function emptySpouse(){
   };
 }
 function emptyExtraMother(){
-  return { id: uid(), kind:"", name_kr:"", name_hj:"", bongwan:"", death: emptyEvent(true), moved: emptyEvent(true) };
+  return { id: uid(), kind:"", name_kr:"", name_hj:"", bongwan:"", birth: emptyEvent(true), death: emptyEvent(true), moved: emptyEvent(true) };
 }
 function emptyExtraSpouse(){
   return Object.assign({ id: uid(), kind:"" }, emptySpouse());
@@ -597,8 +599,8 @@ function emptyDescendant(){
 
 const state = {
   writer:{ name_kr:"", name_hj:"", phone:"", sae:"", ipdoSae:"", relationNote:"" },
-  father:{ name_kr:"", name_hj:"", gye:"", death:emptyEvent(true), moved:emptyEvent(true) },
-  mother:{ name_kr:"", name_hj:"", bongwan:"", death:emptyEvent(true), moved:emptyEvent(true) },
+  father:{ name_kr:"", name_hj:"", gye:"", birth:emptyEvent(true), death:emptyEvent(true), moved:emptyEvent(true) },
+  mother:{ name_kr:"", name_hj:"", bongwan:"", birth:emptyEvent(true), death:emptyEvent(true), moved:emptyEvent(true) },
   extraMothers:[],
   parentsNote:"",
   self:{
@@ -669,6 +671,8 @@ function spouseFieldsHTML(pathPrefix){
 }
 
 /* ---------- render static event blocks (father/mother/self) ---------- */
+document.getElementById('father-birth').innerHTML = eventBlockHTML('father.birth','출생 정보를 입력하겠습니다','출생지');
+document.getElementById('mother-birth').innerHTML = eventBlockHTML('mother.birth','출생 정보를 입력하겠습니다','출생지');
 document.getElementById('father-death').innerHTML = eventBlockHTML('father.death','사망하셨습니다','묘 위치');
 document.getElementById('father-moved').innerHTML = eventBlockHTML('father.moved','이장하셨습니다','이장 위치');
 document.getElementById('mother-death').innerHTML = eventBlockHTML('mother.death','사망하셨습니다','묘 위치');
@@ -838,6 +842,15 @@ const extraCfg = {
            kinds:['재혼 배우자','전 배우자(사별·이혼)','기타'] }
 };
 
+/* 부모 출생정보는 선택 항목(토글). 토글 도입 전 저장분은 값이 있으면 켜진 것으로 간주 */
+function normalizeBirth(o){
+  if(!o.birth){ o.birth = emptyEvent(true); return; }
+  if(o.birth.has === undefined){
+    const d = o.birth.date || {};
+    o.birth.has = !!(d.y || d.m || d.d || o.birth.place);
+  }
+}
+
 function renderExtraCard(type, item, index){
   const cfg = extraCfg[type];
   const p = `__x.${item.id}`;
@@ -853,6 +866,7 @@ function renderExtraCard(type, item, index){
          <div class="field"><label>한자<span class="opt">(선택)</span></label><input type="text" data-path="${p}.name_hj"></div>
        </div>
        <div class="field"><label>본관<span class="opt">(선택)</span></label><input type="text" data-path="${p}.bongwan" placeholder="예: 김해 김씨"></div>
+       ${eventBlockHTML(p + '.birth', '출생 정보를 입력하겠습니다', '출생지')}
        ${eventBlockHTML(p + '.death', '사망하셨습니다', '묘 위치')}
        ${eventBlockHTML(p + '.moved', '이장하셨습니다', '이장 위치')}`
     : spouseFieldsHTML(p);
@@ -882,6 +896,7 @@ function addExtra(type, initial){
   const cfg = extraCfg[type];
   const item = initial ? JSON.parse(JSON.stringify(initial)) : cfg.make();
   if(!item.id) item.id = uid();
+  if(type === 'mother') normalizeBirth(item);
   state[cfg.list].push(item);
   const card = renderExtraCard(type, item, state[cfg.list].length-1);
   document.getElementById(cfg.mountId).appendChild(card);
@@ -1062,6 +1077,8 @@ function hydrateForm(data){
   state.parentsNote = data.parentsNote || '';
   state.etc = data.etc || '';
 
+  normalizeBirth(state.father);
+  normalizeBirth(state.mother);
   populateInputs(document.getElementById('jokboForm'), state);
   updateIpdo();
 

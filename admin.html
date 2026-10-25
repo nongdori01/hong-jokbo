@@ -546,6 +546,11 @@ const modalBackdrop = document.getElementById('modalBackdrop');
 document.getElementById('modalCloseBtn').addEventListener('click', () => modalBackdrop.classList.remove('show'));
 modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) modalBackdrop.classList.remove('show'); });
 
+/* 부모 출생정보: 토글이 꺼진 경우는 숨김, 토글 도입 전 데이터(has 없음)는 값 그대로 표시 */
+function birthInfo(b){
+  if (!b || b.has === false) return { when:'', place:'' };
+  return { when: dateText(b.date), place: b.place || '' };
+}
 function saeText(w){
   if (!w || w.sae === '' || w.sae == null) return '';
   return `${w.sae}세` + (w.ipdoSae ? ` (입도 ${w.ipdoSae}세)` : ' (입도 이전 세대)');
@@ -566,17 +571,20 @@ function buildDetailHTML(s){
 
   html += `<div class="dgroup"><h3>父 부친</h3><div class="dgrid">
     ${row('성명', f.name_kr)}${row('한자', f.name_hj)}${row('계', f.gye)}
+    ${row('출생일', birthInfo(f.birth).when)}${row('출생지', birthInfo(f.birth).place)}
     ${row('사망일', fD.when)}${row('묘 위치', fD.place)}${row('이장일', fM.when)}${row('이장 위치', fM.place)}
   </div></div>`;
 
   html += `<div class="dgroup"><h3>母 모친</h3><div class="dgrid">
     ${row('성명', m.name_kr)}${row('한자', m.name_hj)}${row('본관', m.bongwan)}
+    ${row('출생일', birthInfo(m.birth).when)}${row('출생지', birthInfo(m.birth).place)}
     ${row('사망일', mD.when)}${row('묘 위치', mD.place)}${row('이장일', mM.when)}${row('이장 위치', mM.place)}
   </div></div>`;
   (s.extraMothers||[]).forEach((x,i) => {
     const xD = eventText(x.death), xM = eventText(x.moved);
     html += `<div class="dgroup"><h3>母 모친 추가 ${i+1}${x.kind ? ' · ' + escapeHtml(x.kind) : ''}</h3><div class="dgrid">
       ${row('성명', x.name_kr)}${row('한자', x.name_hj)}${row('본관', x.bongwan)}
+      ${row('출생일', birthInfo(x.birth).when)}${row('출생지', birthInfo(x.birth).place)}
       ${row('사망일', xD.when)}${row('묘 위치', xD.place)}${row('이장일', xM.when)}${row('이장 위치', xM.place)}
     </div></div>`;
   });
@@ -723,7 +731,7 @@ document.getElementById('exportBtn').addEventListener('click', () => {
   if (!subs.length) { alert('내보낼 데이터가 없습니다.'); return; }
 
   const mainHeader = ['제출ID','제출일시','상태','작성자_성명','작성자_연락처','작성자_세','작성자_입도세',
-    '부친_성명','부친_사망일','부친_묘위치','모친_성명','모친_사망일','모친_묘위치',
+    '부친_성명','부친_출생일','부친_출생지','부친_사망일','부친_묘위치','모친_성명','모친_출생일','모친_출생지','모친_사망일','모친_묘위치',
     '본인_성명','본인_출생일','본인_출생지','본인_사망일',
     '배우자_유무','배우자_성명','추가모친','추가배우자','자녀수','후손수'];
   const mainRows = subs.map(s => {
@@ -731,7 +739,8 @@ document.getElementById('exportBtn').addEventListener('click', () => {
     const fD=eventText(f.death), mD=eventText(m.death), sD=eventText(se.death);
     return [
       s.id, fmtTs(s.submittedAt), s.status||'접수', w.name_kr||'', w.phone||'', w.sae||'', w.ipdoSae||'',
-      f.name_kr||'', fD.when, fD.place, m.name_kr||'', mD.when, mD.place,
+      f.name_kr||'', birthInfo(f.birth).when, birthInfo(f.birth).place, fD.when, fD.place,
+      m.name_kr||'', birthInfo(m.birth).when, birthInfo(m.birth).place, mD.when, mD.place,
       se.name_kr||'', dateText(se.birth&&se.birth.date), (se.birth&&se.birth.place)||'', sD.when,
       se.hasSpouse?'있음':'없음', sp.name_kr||'',
       (s.extraMothers||[]).map(x=>(x.name_kr||'')+(x.kind?`(${x.kind})`:'')).join(', '),
