@@ -282,6 +282,14 @@ const firebaseConfig = {
   appId: "1:751397698494:web:d6a39244a74a78370cd7ef"
 };
 
+/* 응답자용 설문 페이지 주소 — 수정링크의 기준입니다. (관리자 주소가 아님)
+   설문 페이지 주소가 다르면 이 값만 바꾸세요. 비워두면 관리자 페이지와 같은 폴더를 사용합니다. */
+const SURVEY_URL = "https://nongdori01.github.io/hong-jokbo/";
+function editLinkFor(id){
+  const base = SURVEY_URL || (location.origin + location.pathname.replace(/[^/]*$/, ''));
+  return base + '?edit=' + encodeURIComponent(id);
+}
+
 const app = firebaseConfig.apiKey ? initializeApp(firebaseConfig) : null;
 const auth = app ? getAuth(app) : null;
 const db = app ? getFirestore(app) : null;
@@ -451,7 +459,7 @@ tbody.addEventListener('click', async (e) => {
   const linkBtn = e.target.closest('[data-link-id]');
   if (linkBtn) {
     const id = linkBtn.getAttribute('data-link-id');
-    const url = location.href.replace(/jokbo-admin\.html.*$/, 'jokbo-survey.html') + '?edit=' + id;
+    const url = editLinkFor(id);
     try {
       await navigator.clipboard.writeText(url);
       const orig = linkBtn.textContent;
